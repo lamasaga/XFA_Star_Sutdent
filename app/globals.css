@@ -1,26 +1,232 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+:root {
+  /* === 新府学配色方案：深蓝 + 浅蓝 + 浅镉黄 + 浅灰 === */
+
+  /* 页面背景：极浅灰蓝 */
+  --background: #f0f4f8;
+  --foreground: #1a202c;
+
+  /* 卡片：纯白 + 柔和阴影 */
+  --card: #ffffff;
+  --card-foreground: #1a202c;
+
+  /* 弹出层 */
+  --popover: #ffffff;
+  --popover-foreground: #1a202c;
+
+  /* 主色：深蓝 */
+  --primary: #1a3a5c;
+  --primary-foreground: #ffffff;
+
+  /* 次色：浅蓝 */
+  --secondary: #e8f0fe;
+  --secondary-foreground: #1a3a5c;
+
+  /* 静音区域：浅灰 */
+  --muted: #e2e8f0;
+  --muted-foreground: #64748b;
+
+  /* 强调色：浅镉黄（谨慎使用，仅用于积分/徽章） */
+  --accent: #fef3c7;
+  --accent-foreground: #92400e;
+
+  /* 边框和输入 */
+  --border: #d1d9e6;
+  --input: #d1d9e6;
+  --ring: #4a90d9;
+
+  /* 危险色：柔和红 */
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+
+  /* 图表配色 */
+  --chart-1: #1a3a5c;
+  --chart-2: #4a90d9;
+  --chart-3: #f0d050;
+  --chart-4: #10b981;
+  --chart-5: #8b5cf6;
+
+  --radius: 0.625rem;
+
+  /* 侧边栏 */
+  --sidebar: #ffffff;
+  --sidebar-foreground: #1a202c;
+  --sidebar-primary: #1a3a5c;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e8f0fe;
+  --sidebar-accent-foreground: #1a3a5c;
+  --sidebar-border: #e2e8f0;
+  --sidebar-ring: #4a90d9;
+}
+
+.dark {
+  --background: #0f172a;
+  --foreground: #e2e8f0;
+  --card: #1e293b;
+  --card-foreground: #e2e8f0;
+  --popover: #1e293b;
+  --popover-foreground: #e2e8f0;
+  --primary: #4a90d9;
+  --primary-foreground: #0f172a;
+  --secondary: #1e293b;
+  --secondary-foreground: #e2e8f0;
+  --muted: #334155;
+  --muted-foreground: #94a3b8;
+  --accent: #451a03;
+  --accent-foreground: #fcd34d;
+  --border: #334155;
+  --input: #334155;
+  --ring: #4a90d9;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --chart-1: #4a90d9;
+  --chart-2: #60a5fa;
+  --chart-3: #f0d050;
+  --chart-4: #34d399;
+  --chart-5: #a78bfa;
+  --sidebar: #1e293b;
+  --sidebar-foreground: #e2e8f0;
+  --sidebar-primary: #4a90d9;
+  --sidebar-primary-foreground: #0f172a;
+  --sidebar-accent: #334155;
+  --sidebar-accent-foreground: #e2e8f0;
+  --sidebar-border: #334155;
+  --sidebar-ring: #4a90d9;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* === 自定义工具类 === */
+
+/* 卡片阴影层级 */
+.shadow-card {
+  box-shadow: 0 1px 3px rgba(26, 58, 92, 0.06), 0 1px 2px rgba(26, 58, 92, 0.04);
+}
+
+.shadow-card-hover {
+  box-shadow: 0 4px 12px rgba(26, 58, 92, 0.08), 0 2px 4px rgba(26, 58, 92, 0.04);
+}
+
+.shadow-elevated {
+  box-shadow: 0 8px 24px rgba(26, 58, 92, 0.1), 0 2px 8px rgba(26, 58, 92, 0.06);
+}
+
+/* 侧边栏阴影 */
+.shadow-sidebar {
+  box-shadow: 2px 0 8px rgba(26, 58, 92, 0.06);
+}
+
+/* 导航选中状态 */
+.nav-active {
+  background: linear-gradient(135deg, #1a3a5c 0%, #234b73 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(26, 58, 92, 0.25);
+}
+
+/* 渐变背景 */
+.bg-gradient-primary {
+  background: linear-gradient(135deg, #1a3a5c 0%, #234b73 50%, #2d5a87 100%);
+}
+
+.bg-gradient-subtle {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+}
+
+/* 积分/徽章强调色 */
+.bg-accent-gold {
+  background: linear-gradient(135deg, #f0d050 0%, #f5d76e 100%);
+}
+
+.text-accent-gold {
+  color: #b45309;
+}
+
+/* 微边框卡片 */
+.card-subtle {
+  border: 1px solid rgba(209, 217, 230, 0.6);
+  background: white;
+  box-shadow: 0 1px 2px rgba(26, 58, 92, 0.04);
+}
+
+/* 分隔线 */
+.divider-subtle {
+  border-color: rgba(209, 217, 230, 0.5);
+}
+
+/* 滚动条美化 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c5d0e0;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }

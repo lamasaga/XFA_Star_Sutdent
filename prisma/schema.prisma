@@ -1,0 +1,309 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== 基础用户与角色 ====================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String    // bcrypt hashed
+  name          String
+  avatar        String?
+  role          String    @default("STUDENT")
+  status        String    @default("ACTIVE")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  student       Student?
+  teacher       Teacher?
+
+  @@map("users")
+}
+
+// ==================== 学校组织架构 ====================
+
+model Grade {
+  id          String    @id @default(cuid())
+  name        String    // 如"高一"、"高二"
+  level       Int       // 年级序号，如 1, 2, 3
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  classes     Class[]
+
+  @@map("grades")
+}
+
+model Class {
+  id          String    @id @default(cuid())
+  name        String    // 如"1班"、"2班"
+  gradeId     String    @map("grade_id")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  grade       Grade     @relation(fields: [gradeId], references: [id])
+  students    Student[]
+  teacherClasses TeacherClass[]
+
+  @@map("classes")
+}
+
+model TeacherClass {
+  id          String    @id @default(cuid())
+  teacherId   String    @map("teacher_id")
+  classId     String    @map("class_id")
+  isHomeroom  Boolean   @default(false) @map("is_homeroom") // 是否班主任
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  teacher     Teacher   @relation(fields: [teacherId], references: [id])
+  class       Class     @relation(fields: [classId], references: [id])
+
+  @@unique([teacherId, classId])
+  @@map("teacher_classes")
+}
+
+// ==================== 学生 ====================
+
+model Student {
+  id              String    @id @default(cuid())
+  userId          String    @unique @map("user_id")
+  studentNo       String    @unique @map("student_no") // 学号
+  name            String
+  gender          String
+  classId         String    @map("class_id")
+  enrollmentDate  DateTime  @map("enrollment_date")
+  graduationYear  Int       @default(2030) @map("graduation_year") // 毕业年份，如2028表示2028年高三毕业
+  status          String    @default("ENROLLED")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  class           Class     @relation(fields: [classId], references: [id])
+  comments        Comment[]
+  assessments     Assessment[]
+  milestones      Milestone[]
+  scores          Score[]
+  activities      Activity[]
+  moodEntries     MoodEntry[]
+  careerProfile   CareerProfile?
+  semesterReports SemesterReport[]
+
+  @@map("students")
+}
+
+// ==================== 教师 ====================
+
+model Teacher {
+  id          String    @id @default(cuid())
+  userId      String    @unique @map("user_id")
+  name        String
+  title       String?   // 职称
+  subjects    String    // 任教科目，JSON数组序列化
+  teacherRole String    @default("SUBJECT") @map("teacher_role")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comments    Comment[]
+  teacherClasses TeacherClass[]
+  activityEvaluations Activity[] @relation("ActivityEvaluator")
+
+  @@map("teachers")
+}
+
+// ==================== 评语系统 ====================
+
+model Comment {
+  id          String      @id @default(cuid())
+  studentId   String      @map("student_id")
+  teacherId   String      @map("teacher_id")
+  type        String
+  content     String
+  dimensions  String?     // {学业, 态度, 协作, 创新, 责任} 评分 JSON
+  semester    String      // 学期标识，如"2024-2025-1"
+  isPinned    Boolean     @default(false) @map("is_pinned")
+  createdAt   DateTime    @default(now()) @map("created_at")
+
+  // Relations
+  student     Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  teacher     Teacher     @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@index([studentId, createdAt])
+  @@index([teacherId, createdAt])
+  @@map("comments")
+}
+
+// ==================== 心理测评与心情日记 ====================
+
+model Assessment {
+  id                String          @id @default(cuid())
+  studentId         String          @map("student_id")
+  type              String
+  scaleName         String          @map("scale_name")
+  scaleCode         String          @map("scale_code")
+  resultJson        String          @map("result_json")
+  score             Float?
+  riskLevel         String?         @map("risk_level")
+  visibleToStudent  Boolean         @default(true) @map("visible_to_student")
+  visibleToParent   Boolean         @default(false) @map("visible_to_parent")
+  semester          String
+  createdAt         DateTime        @default(now()) @map("created_at")
+
+  // Relations
+  student           Student         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId, type])
+  @@index([riskLevel, createdAt])
+  @@map("assessments")
+}
+
+model MoodEntry {
+  id          String    @id @default(cuid())
+  studentId   String    @map("student_id")
+  rating      Int       // 1-5 星
+  note        String?
+  date        DateTime
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  student     Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, date])
+  @@index([studentId, date])
+  @@map("mood_entries")
+}
+
+// ==================== 里程碑系统 ====================
+
+model Milestone {
+  id          String        @id @default(cuid())
+  studentId   String        @map("student_id")
+  type        String
+  title       String
+  description String?
+  source      String        @default("MANUAL")
+  status      String        @default("APPROVED")
+  occurredAt  DateTime      @map("occurred_at")
+  relatedData String?       @map("related_data")
+  createdAt   DateTime      @default(now()) @map("created_at")
+
+  // Relations
+  student     Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId, occurredAt])
+  @@map("milestones")
+}
+
+// ==================== 成绩系统 ====================
+
+model Score {
+  id          String    @id @default(cuid())
+  studentId   String    @map("student_id")
+  subject     String
+  examType    String    @map("exam_type")
+  score       Float
+  total       Float     @default(100)
+  classRank   Int?      @map("class_rank")
+  gradeRank   Int?      @map("grade_rank")
+  semester    String
+  examDate    DateTime  @map("exam_date")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  student     Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId, semester])
+  @@index([studentId, subject, examDate])
+  @@map("scores")
+}
+
+// ==================== 活动记录 ====================
+
+model Activity {
+  id                String        @id @default(cuid())
+  studentId         String        @map("student_id")
+  name              String
+  category          String
+  type              String
+  role              String        // 参与者/组织者/获奖者
+  result            String?       // 成果/奖项
+  startDate         DateTime      @map("start_date")
+  endDate           DateTime?     @map("end_date")
+  teacherEvaluation String?       @map("teacher_evaluation")
+  evaluatorId       String?       @map("evaluator_id")
+  proofFiles        String?       @map("proof_files")
+  status            String        @default("APPROVED")
+  points            Int           @default(0) // 综合素养积分
+  createdAt         DateTime      @default(now()) @map("created_at")
+
+  // Relations
+  student           Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  evaluator         Teacher?      @relation("ActivityEvaluator", fields: [evaluatorId], references: [id])
+
+  @@index([studentId, startDate])
+  @@index([status, createdAt])
+  @@map("activities")
+}
+
+// ==================== 生涯档案 ====================
+
+model CareerProfile {
+  id                String    @id @default(cuid())
+  studentId         String    @unique @map("student_id")
+  fiveDimensions    String    @map("five_dimensions") // {学业, 心理, 职业, 社交, 特长} JSON
+  dimensionHistory  String    @map("dimension_history") // 历史变化数组 JSON
+  totalScore        Int       @default(0) @map("total_score")
+  level             Int       @default(1)
+  unlockedItems     String    @map("unlocked_items") // 成长空间已解锁项 JSON
+  goals             String?   // 当前目标列表 JSON
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  student           Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@map("career_profiles")
+}
+
+// ==================== 学期档案 ====================
+
+model SemesterReport {
+  id            String    @id @default(cuid())
+  studentId     String    @map("student_id")
+  semester      String
+  reportJson    String    @map("report_json")
+  pdfUrl        String?   @map("pdf_url")
+  isPublished   Boolean   @default(false) @map("is_published")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  student       Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, semester])
+  @@map("semester_reports")
+}
+
+// ==================== 系统配置 ====================
+
+model SystemSetting {
+  id          String    @id @default(cuid())
+  key         String    @unique
+  value       String
+  description String?
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@map("system_settings")
+}
