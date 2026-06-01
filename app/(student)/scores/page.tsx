@@ -8,7 +8,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend,
 } from "recharts";
 import {
@@ -243,16 +243,24 @@ export default function ScoresPage() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={trendData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" />
+              <LineChart data={trendData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis dataKey="date" tick={{ fontSize: 11 }} />
                 <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} />
-                <Tooltip />
+                <Tooltip formatter={(value: any, name: string) => [`${value}%`, name]} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
                 {subjects.map((subj, i) => (
-                  <Bar key={subj} dataKey={subj} fill={SUBJECT_COLORS[subj] || COLORS[i % COLORS.length]} radius={[2, 2, 0, 0]} />
+                  <Line
+                    key={subj}
+                    type="monotone"
+                    dataKey={subj}
+                    stroke={SUBJECT_COLORS[subj] || COLORS[i % COLORS.length]}
+                    strokeWidth={2.5}
+                    dot={{ r: 3, strokeWidth: 1.5, fill: "#fff" }}
+                    activeDot={{ r: 5 }}
+                  />
                 ))}
-              </BarChart>
+              </LineChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
