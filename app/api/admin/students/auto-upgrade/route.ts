@@ -133,7 +133,6 @@ export async function GET(req: NextRequest) {
   try {
     const students = await prisma.student.findMany({
       where: { status: "ENROLLED" },
-      select: { graduationYear: true, classId: true },
       include: { class: { include: { grade: true } } },
     });
 

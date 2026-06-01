@@ -4,11 +4,8 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import dynamic from "next/dynamic";
 
-const TeacherDashboard = dynamic(
-  () =>
-    import("@/components/dashboard/teacher-dashboard").then(
-      (mod) => mod.TeacherDashboard
-    ),
+const AdminDashboard = dynamic(
+  () => import("@/components/dashboard/admin-dashboard").then((mod) => mod.AdminDashboard),
   {
     loading: () => <DashboardSkeleton />,
     ssr: true,
@@ -34,16 +31,16 @@ function DashboardSkeleton() {
   );
 }
 
-export default async function TeacherDashboardPage() {
+export default async function AdminPage() {
   const session = await getServerSession(authOptions);
 
-  if (!session?.user || session.user.role !== "TEACHER") {
+  if (!session?.user || session.user.role !== "ADMIN") {
     redirect("/login");
   }
 
   return (
     <Suspense fallback={<DashboardSkeleton />}>
-      <TeacherDashboard teacherId={session.user.teacherId!} />
+      <AdminDashboard />
     </Suspense>
   );
 }

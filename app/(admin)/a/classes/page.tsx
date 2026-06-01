@@ -236,7 +236,7 @@ export default function AdminClassesPage() {
                 className="h-9"
               />
             </div>
-            <Select value={filterGrade} onValueChange={setFilterGrade}>
+            <Select value={filterGrade} onValueChange={(v) => setFilterGrade(v || "")}>
               <SelectTrigger className="w-[120px] h-9">
                 <SelectValue placeholder="年级" />
               </SelectTrigger>

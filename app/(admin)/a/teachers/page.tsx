@@ -270,7 +270,7 @@ export default function AdminTeachersPage() {
                 className="h-9"
               />
             </div>
-            <Select value={filterRole} onValueChange={setFilterRole}>
+            <Select value={filterRole} onValueChange={(v) => setFilterRole(v || "")}>
               <SelectTrigger className="w-[140px] h-9">
                 <SelectValue placeholder="角色" />
               </SelectTrigger>

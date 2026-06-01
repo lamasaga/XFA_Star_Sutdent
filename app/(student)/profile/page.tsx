@@ -84,7 +84,6 @@ export default async function ProfilePage() {
       prisma.score.findMany({
         where: { studentId },
         orderBy: { examDate: "desc" },
-        include: { exam: true },
       }),
     ]);
 
@@ -147,7 +146,7 @@ export default async function ProfilePage() {
     ...scores.map((s) => ({
       type: "成绩" as const,
       date: s.examDate,
-      title: `${s.exam?.name || "考试"} · ${s.subject} · ${s.score}分`,
+      title: `${s.examType || "考试"} · ${s.subject} · ${s.score}分`,
     })),
     ...comments.map((c) => ({
       type: "评语" as const,

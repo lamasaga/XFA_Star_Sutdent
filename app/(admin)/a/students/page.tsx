@@ -147,7 +147,7 @@ export default function AdminStudentsPage() {
 
   const fetchMeta = useCallback(async () => {
     try {
-      const [gRes, cRes] = await Promise.all([
+      const [gRes] = await Promise.all([
         fetch("/api/admin/classes?pageSize=100"),
       ]);
       if (gRes.ok) {
@@ -391,7 +391,7 @@ export default function AdminStudentsPage() {
                 className="h-9"
               />
             </div>
-            <Select value={filterGrade} onValueChange={(v) => { setFilterGrade(v); setFilterClass(""); }}>
+            <Select value={filterGrade} onValueChange={(v) => { setFilterGrade(v || ""); setFilterClass(""); }}>
               <SelectTrigger className="w-[120px] h-9">
                 <SelectValue placeholder="年级" />
               </SelectTrigger>
@@ -402,7 +402,7 @@ export default function AdminStudentsPage() {
                 ))}
               </SelectContent>
             </Select>
-            <Select value={filterClass} onValueChange={setFilterClass}>
+            <Select value={filterClass} onValueChange={(v) => setFilterClass(v || "")}>
               <SelectTrigger className="w-[120px] h-9">
                 <SelectValue placeholder="班级" />
               </SelectTrigger>
@@ -413,7 +413,7 @@ export default function AdminStudentsPage() {
                 ))}
               </SelectContent>
             </Select>
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v || "")}>
               <SelectTrigger className="w-[100px] h-9">
                 <SelectValue placeholder="状态" />
               </SelectTrigger>
@@ -424,7 +424,7 @@ export default function AdminStudentsPage() {
                 ))}
               </SelectContent>
             </Select>
-            <Select value={filterGraduationYear} onValueChange={setFilterGraduationYear}>
+            <Select value={filterGraduationYear} onValueChange={(v) => setFilterGraduationYear(v || "")}>
               <SelectTrigger className="w-[120px] h-9">
                 <SelectValue placeholder="毕业年份" />
               </SelectTrigger>

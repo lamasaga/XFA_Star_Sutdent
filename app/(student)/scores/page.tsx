@@ -78,7 +78,7 @@ export default function ScoresPage() {
     原始分: latest.score,
   }));
 
-  // 成绩趋势数据（按考试日期分组）
+  // 成绩趋势数据
   const trendMap = new Map<string, Record<string, number>>();
   const subjectSet = new Set<string>();
   [...scores].sort((a, b) => new Date(a.examDate).getTime() - new Date(b.examDate).getTime()).forEach((s) => {
@@ -104,23 +104,23 @@ export default function ScoresPage() {
   const COLORS = ["#2563eb", "#dc2626", "#16a34a", "#9333ea", "#ca8a04", "#0891b2"];
 
   function getRankIcon(current?: number, previous?: number) {
-    if (!current || !previous) return <Minus className="h-3 w-3 text-muted-foreground" />;
+    if (!current || !previous) return <Minus className="h-3 w-3 text-slate-400" />;
     if (current < previous) return <ChevronUp className="h-3 w-3 text-green-500" />;
     if (current > previous) return <ChevronDown className="h-3 w-3 text-red-500" />;
-    return <Minus className="h-3 w-3 text-muted-foreground" />;
+    return <Minus className="h-3 w-3 text-slate-400" />;
   }
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
+    <div className="space-y-5">
+      {/* 标题 */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">学业成绩</h1>
-        <p className="text-muted-foreground mt-1">成绩详情、趋势分析与学科均衡度</p>
+        <h1 className="text-lg font-bold text-[#1a3a5c]">学业成绩</h1>
+        <p className="text-sm text-slate-400 mt-0.5">成绩详情、趋势分析与学科均衡度</p>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
+      {/* 统计卡片 */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <Card className="border-0 shadow-sm">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-blue-50">
@@ -128,12 +128,12 @@ export default function ScoresPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{latestBySubject.length}</p>
-                <p className="text-xs text-muted-foreground">考试科目</p>
+                <p className="text-xs text-slate-400">考试科目</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-0 shadow-sm">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-green-50">
@@ -141,12 +141,12 @@ export default function ScoresPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{avgScore}%</p>
-                <p className="text-xs text-muted-foreground">平均得分率</p>
+                <p className="text-xs text-slate-400">平均得分率</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-0 shadow-sm">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-purple-50">
@@ -154,12 +154,12 @@ export default function ScoresPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{bestSubject?.latest.score || 0}</p>
-                <p className="text-xs text-muted-foreground">最高分 · {bestSubject?.subject || "—"}</p>
+                <p className="text-xs text-slate-400">最高分 · {bestSubject?.subject || "—"}</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-0 shadow-sm">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-orange-50">
@@ -167,23 +167,22 @@ export default function ScoresPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{scores.length}</p>
-                <p className="text-xs text-muted-foreground">考试记录</p>
+                <p className="text-xs text-slate-400">考试记录</p>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* 学科均衡度雷达图 */}
-        <Card>
+      {/* 图表 */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Card className="border-0 shadow-sm">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <School className="h-5 w-5" />
+            <CardTitle className="text-[15px] text-[#1a3a5c] flex items-center gap-2">
+              <School className="h-4 w-4" />
               学科均衡度
             </CardTitle>
-            <CardDescription>各科得分率对比，满分100%</CardDescription>
+            <CardDescription className="text-[12px]">各科得分率对比，满分100%</CardDescription>
           </CardHeader>
           <CardContent>
             {balanceData.length > 0 ? (
@@ -197,21 +196,20 @@ export default function ScoresPage() {
                 </RadarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex items-center justify-center h-[280px] text-muted-foreground text-sm">
+              <div className="flex items-center justify-center h-[280px] text-slate-400 text-sm">
                 暂无成绩数据
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* 最新成绩柱状图 */}
-        <Card>
+        <Card className="border-0 shadow-sm">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
+            <CardTitle className="text-[15px] text-[#1a3a5c] flex items-center gap-2">
+              <TrendingUp className="h-4 w-4" />
               最新成绩
             </CardTitle>
-            <CardDescription>各科最新考试得分率</CardDescription>
+            <CardDescription className="text-[12px]">各科最新考试得分率</CardDescription>
           </CardHeader>
           <CardContent>
             {balanceData.length > 0 ? (
@@ -220,12 +218,12 @@ export default function ScoresPage() {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="subject" tick={{ fontSize: 12 }} />
                   <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} />
-                  <Tooltip formatter={(value: number) => [`${value}%`, "得分率"]} />
+                  <Tooltip formatter={(value: any) => [`${value}%`, "得分率"]} />
                   <Bar dataKey="得分" fill="#2563eb" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex items-center justify-center h-[280px] text-muted-foreground text-sm">
+              <div className="flex items-center justify-center h-[280px] text-slate-400 text-sm">
                 暂无成绩数据
               </div>
             )}
@@ -233,15 +231,15 @@ export default function ScoresPage() {
         </Card>
       </div>
 
-      {/* 成绩趋势图 */}
+      {/* 成绩趋势 */}
       {trendData.length > 1 && (
-        <Card>
+        <Card className="border-0 shadow-sm">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
+            <CardTitle className="text-[15px] text-[#1a3a5c] flex items-center gap-2">
+              <TrendingUp className="h-4 w-4" />
               成绩趋势
             </CardTitle>
-            <CardDescription>历次考试得分率变化</CardDescription>
+            <CardDescription className="text-[12px]">历次考试得分率变化</CardDescription>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -260,21 +258,21 @@ export default function ScoresPage() {
         </Card>
       )}
 
-      {/* 成绩明细表 */}
-      <Card>
+      {/* 成绩明细 */}
+      <Card className="border-0 shadow-sm">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2">
-            <BookOpen className="h-5 w-5" />
+          <CardTitle className="text-[15px] text-[#1a3a5c] flex items-center gap-2">
+            <BookOpen className="h-4 w-4" />
             成绩明细
           </CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <RotateCcw className="h-6 w-6 animate-spin text-muted-foreground" />
+              <RotateCcw className="h-6 w-6 animate-spin text-slate-400" />
             </div>
           ) : scores.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
+            <div className="text-center py-12 text-slate-400">
               暂无成绩记录
             </div>
           ) : (
@@ -303,7 +301,7 @@ export default function ScoresPage() {
                             {s.subject}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
+                        <TableCell className="text-sm text-slate-400">
                           {s.examType === "MONTHLY" ? "月考" : s.examType === "MIDTERM" ? "期中" : s.examType === "FINAL" ? "期末" : s.examType}
                         </TableCell>
                         <TableCell className="font-medium">{s.score}/{s.total}</TableCell>
@@ -315,7 +313,7 @@ export default function ScoresPage() {
                         </TableCell>
                         <TableCell className="text-sm">{s.classRank ? `第${s.classRank}名` : "—"}</TableCell>
                         <TableCell className="text-sm">{s.gradeRank ? `第${s.gradeRank}名` : "—"}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">{s.semester}</TableCell>
+                        <TableCell className="text-sm text-slate-400">{s.semester}</TableCell>
                       </TableRow>
                     );
                   })}

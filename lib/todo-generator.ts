@@ -20,7 +20,7 @@ export async function generateTodos(studentId: string): Promise<TodoItem[]> {
   threeDaysLater.setDate(threeDaysLater.getDate() + 3);
   threeDaysLater.setHours(23, 59, 59, 999);
 
-  const [todayMood, weekAssessment, upcomingExams] = await Promise.all([
+  const [todayMood, weekAssessment, upcomingScores] = await Promise.all([
     // 1. 今天是否已记录心情
     prisma.moodEntry.findFirst({
       where: {
@@ -39,21 +39,19 @@ export async function generateTodos(studentId: string): Promise<TodoItem[]> {
       select: { id: true },
     }),
 
-    // 3. 3 天内是否有考试
-    prisma.exam.findMany({
+    // 3. 3 天内是否有考试（通过 score 表推断）
+    prisma.score.findMany({
       where: {
-        class: {
-          students: { some: { id: studentId } },
-        },
+        studentId,
         examDate: {
           gte: today,
           lte: threeDaysLater,
         },
       },
       select: {
-        name: true,
         subject: true,
         examDate: true,
+        examType: true,
       },
       orderBy: { examDate: "asc" },
     }),
@@ -83,11 +81,15 @@ export async function generateTodos(studentId: string): Promise<TodoItem[]> {
     });
   }
 
-  // 3 天内有考试 → medium 优先级
-  for (const exam of upcomingExams) {
+  // 3 天内有考试 → medium 优先级（去重）
+  const seen = new Set<string>();
+  for (const s of upcomingScores) {
+    const key = `${s.subject}-${s.examDate.toISOString().split("T")[0]}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
     todos.push({
-      id: `exam-${exam.subject}`,
-      text: `${exam.subject}月考复习提醒`,
+      id: `exam-${s.subject}-${s.examDate.toISOString().split("T")[0]}`,
+      text: `${s.subject} ${s.examType || "考试"}复习提醒`,
       priority: "medium",
       completed: false,
     });

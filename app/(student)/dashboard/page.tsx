@@ -89,7 +89,7 @@ export default async function DashboardPage() {
   // 计算心情连续记录天数
   let moodStreak = 0;
   if (moodEntries.length > 0) {
-    const entryDates = new Set(moodEntries.map((e) => new Date(e.date).toDateString()));
+    const entryDates = new Set(moodEntries.map((e: { date: Date }) => new Date(e.date).toDateString()));
     for (let i = 0; i < 30; i++) {
       const checkDate = new Date(today);
       checkDate.setDate(checkDate.getDate() - i);
@@ -103,7 +103,7 @@ export default async function DashboardPage() {
 
   const moodDaysThisWeek = moodEntries.length;
   const todayMoodRecorded = moodEntries.some(
-    (e) => new Date(e.date).toDateString() === today.toDateString()
+    (e: { date: Date }) => new Date(e.date).toDateString() === today.toDateString()
   );
 
   // 动态流（最近3条）

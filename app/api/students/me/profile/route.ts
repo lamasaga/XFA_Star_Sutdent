@@ -69,7 +69,6 @@ export async function GET() {
         prisma.score.findMany({
           where: { studentId },
           orderBy: { examDate: "desc" },
-          include: { exam: true },
         }),
       ]);
 
@@ -119,7 +118,7 @@ export async function GET() {
     const subjects = [...new Set(scores.map((s) => s.subject))];
     const avgScoreRate =
       scores.length > 0
-        ? scores.reduce((sum, s) => sum + s.score / (s.exam?.fullScore || 100), 0) /
+        ? scores.reduce((sum, s) => sum + s.score / (s.total || 100), 0) /
           scores.length
         : 0;
 
