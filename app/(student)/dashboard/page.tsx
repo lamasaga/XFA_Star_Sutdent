@@ -8,24 +8,15 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  LayoutDashboard,
   Brain,
   Heart,
   Trophy,
   Target,
   CheckCircle2,
-  Circle,
   Flame,
 } from "lucide-react";
+import { MoodQuickRecord } from "@/components/mood-quick-record";
 import Link from "next/link";
-
-const MOOD_OPTIONS = [
-  { label: "很低落", emoji: "😢", color: "bg-red-50 text-red-600 border-red-200" },
-  { label: "有些低落", emoji: "😕", color: "bg-orange-50 text-orange-600 border-orange-200" },
-  { label: "一般", emoji: "😐", color: "bg-slate-50 text-slate-600 border-slate-200" },
-  { label: "不错", emoji: "🙂", color: "bg-blue-50 text-blue-600 border-blue-200" },
-  { label: "非常好", emoji: "😄", color: "bg-green-50 text-green-600 border-green-200" },
-];
 
 const QUICK_LINKS = [
   { href: "/assessments", title: "心理测评", desc: "了解自己", icon: Brain, color: "bg-blue-50 text-blue-700" },
@@ -92,7 +83,6 @@ export default async function DashboardPage() {
       }),
     ]);
 
-  const userName = student?.name || "同学";
   const level = student?.careerProfile?.level || 1;
   const points = student?.careerProfile?.totalScore || 0;
 
@@ -101,7 +91,7 @@ export default async function DashboardPage() {
   if (moodEntries.length > 0) {
     const entryDates = new Set(moodEntries.map((e) => new Date(e.date).toDateString()));
     for (let i = 0; i < 30; i++) {
-      const checkDate = new Date(todayTop);
+      const checkDate = new Date(today);
       checkDate.setDate(checkDate.getDate() - i);
       if (entryDates.has(checkDate.toDateString())) {
         moodStreak++;
@@ -113,7 +103,7 @@ export default async function DashboardPage() {
 
   const moodDaysThisWeek = moodEntries.length;
   const todayMoodRecorded = moodEntries.some(
-    (e) => new Date(e.date).toDateString() === todayTop.toDateString()
+    (e) => new Date(e.date).toDateString() === today.toDateString()
   );
 
   // 动态流（最近3条）
@@ -285,39 +275,7 @@ export default async function DashboardPage() {
                   <span>今天的心情已记录</span>
                 </div>
               ) : (
-                <>
-                  <div className="grid grid-cols-5 gap-2">
-                    {MOOD_OPTIONS.map((opt) => (
-                      <form
-                        key={opt.label}
-                        action="/api/mood"
-                        method="POST"
-                        className="contents"
-                      >
-                        <input type="hidden" name="rating" value={MOOD_OPTIONS.indexOf(opt) + 1} />
-                        <button
-                          type="submit"
-                          className={`flex flex-col items-center gap-1 p-2 rounded-lg border ${opt.color} hover:shadow-sm transition-all text-center`}
-                        >
-                          <span className="text-lg">{opt.emoji}</span>
-                          <span className="text-[10px] leading-tight">{opt.label}</span>
-                        </button>
-                      </form>
-                    ))}
-                  </div>
-                  <form action="/api/mood" method="POST" className="flex gap-2">
-                    <input type="hidden" name="rating" value="3" />
-                    <input
-                      type="text"
-                      name="note"
-                      placeholder="写下今天的心情..."
-                      className="flex-1 text-[13px] px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#4a90d9]/20"
-                    />
-                    <Button type="submit" size="sm" className="bg-[#4a90d9] hover:bg-[#357abd]">
-                      记录
-                    </Button>
-                  </form>
-                </>
+                <MoodQuickRecord />
               )}
             </CardContent>
           </Card>
@@ -328,7 +286,6 @@ export default async function DashboardPage() {
               <CardTitle className="text-[15px] text-[#1a3a5c]">本周打卡进度</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* 心情日记 */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-[13px] text-[#1a3a5c]">心情日记</span>
@@ -339,8 +296,6 @@ export default async function DashboardPage() {
                 </div>
                 <Progress value={moodDaysThisWeek} max={7} className="h-1.5" />
               </div>
-
-              {/* 五维自评 */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-[13px] text-[#1a3a5c]">五维自评</span>
@@ -348,8 +303,6 @@ export default async function DashboardPage() {
                 </div>
                 <Progress value={0} max={1} className="h-1.5" />
               </div>
-
-              {/* 里程碑 */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-[13px] text-[#1a3a5c]">里程碑</span>
