@@ -1,417 +1,432 @@
-"use client";
-
-import { useState, useEffect } from "react";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import {
-  RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend, ResponsiveContainer,
-} from "recharts";
-import {
-  User, School, Calendar, Mail, Award, Trophy, Star, BookOpen, Activity, MessageSquare, Flame, RotateCcw,
-  TrendingUp,
-} from "lucide-react";
+import { FiveDimensionRadar } from "@/components/radar-chart";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
-interface ProfileData {
-  student: {
-    id: string;
-    name: string;
-    studentNo: string;
-    gender: string;
-    graduationYear: number;
-    enrollmentDate: string;
-    status: string;
-    class: { name: string; grade: { name: string; level: number } };
-    user: { email: string };
-    careerProfile?: {
-      fiveDimensions: string;
-      totalScore: number;
-      level: number;
-      unlockedItems: string;
-    } | null;
-  };
-}
+const DIMENSION_KEYS = ["学业", "心理", "职业", "社交", "特长"] as const;
 
-interface Comment {
-  id: string;
-  content: string;
-  type: string;
-  semester: string;
-  createdAt: string;
-  teacher: { name: string; title: string | null };
-}
-
-interface Milestone {
-  id: string;
-  title: string;
-  type: string;
-  status: string;
-  occurredAt: string;
-}
-
-interface ActivityRecord {
-  id: string;
-  name: string;
-  category: string;
-  role: string;
-  points: number;
-  startDate: string;
-  result: string | null;
-}
-
-const TYPE_ICONS: Record<string, typeof Trophy> = {
-  ACADEMIC: BookOpen, ACTIVITY: Activity, COMPETITION: Trophy, PSYCHOLOGY: Star, PERSONAL: User, GROWTH: TrendingUp,
-};
-const TYPE_COLORS: Record<string, string> = {
-  ACADEMIC: "bg-blue-50 text-blue-600", ACTIVITY: "bg-green-50 text-green-600", COMPETITION: "bg-purple-50 text-purple-600",
-  PSYCHOLOGY: "bg-pink-50 text-pink-600", PERSONAL: "bg-orange-50 text-orange-600", GROWTH: "bg-yellow-50 text-yellow-600",
-};
-const TYPE_LABELS: Record<string, string> = {
-  ACADEMIC: "学业", ACTIVITY: "活动", COMPETITION: "比赛", PSYCHOLOGY: "心理", PERSONAL: "个人", GROWTH: "成长",
-};
-
-export default function ProfilePage() {
-  const [profile, setProfile] = useState<ProfileData | null>(null);
-  const [comments, setComments] = useState<Comment[]>([]);
-  const [milestones, setMilestones] = useState<Milestone[]>([]);
-  const [activities, setActivities] = useState<ActivityRecord[]>([]);
-  const [scores, setScores] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function fetchAll() {
-      try {
-        const [profileRes, commentsRes, milestonesRes, activitiesRes, scoresRes] = await Promise.all([
-          fetch("/api/students/me"),
-          fetch("/api/comments?pageSize=6"),
-          fetch("/api/milestones?pageSize=6"),
-          fetch("/api/activities?pageSize=6"),
-          fetch("/api/scores?pageSize=100"),
-        ]);
-
-        if (profileRes.ok) setProfile(await profileRes.json());
-        if (commentsRes.ok) { const d = await commentsRes.json(); setComments(d.data || []); }
-        if (milestonesRes.ok) { const d = await milestonesRes.json(); setMilestones(d.data || []); }
-        if (activitiesRes.ok) { const d = await activitiesRes.json(); setActivities(d.activities || []); }
-        if (scoresRes.ok) { const d = await scoresRes.json(); setScores(d.data || []); }
-      } catch (error) {
-        console.error("获取档案失败:", error);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchAll();
-  }, []);
-
-  const student = profile?.student;
-
-  let dimensions: Record<string, number> = {};
-  if (student?.careerProfile?.fiveDimensions) {
-    try { dimensions = JSON.parse(student.careerProfile.fiveDimensions); } catch { }
+function getDimensionInsight(score: number, average: number, dimension: string): string {
+  const diff = score - average;
+  if (dimension === "心理") {
+    if (score >= 80) return "心理状态良好，继续保持积极心态";
+    if (score >= 60) return "心理状态平稳，注意调节压力";
+    return "建议关注心理健康，可与心理老师交流";
   }
-  const radarData = ["学业", "心理", "职业", "社交", "特长"].map((d) => ({
-    dimension: d, score: dimensions[d] || 50,
-  }));
-
-  function getCurrentGrade(graduationYear: number): string {
-    const now = new Date();
-    const ay = now.getMonth() >= 8 ? now.getFullYear() : now.getFullYear() - 1;
-    const level = graduationYear - ay;
-    const map: Record<number, string> = { 3: "高一", 2: "高二", 1: "高三" };
-    return map[level] || "—";
+  if (dimension === "学业") {
+    if (diff >= 10) return "学业表现优异，领先班级平均水平";
+    if (diff >= -5) return "学业表现稳定，继续保持";
+    return "学业有提升空间，建议加强薄弱科目";
   }
+  if (dimension === "职业") {
+    if (score >= 70) return "职业方向较为明确，建议深化探索";
+    return "职业认知有待发展，多参与职业体验活动";
+  }
+  if (diff >= 5) return "表现突出，继续保持优势";
+  if (diff >= -5) return "表现平稳，与班级平均水平相当";
+  return "有提升空间，建议多参与相关活动";
+}
 
-  const totalActivities = activities.reduce((s, a) => s + a.points, 0);
+export default async function ProfilePage() {
+  const session = await getServerSession(authOptions);
 
-  if (loading) {
+  if (!session?.user?.studentId) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
-        <RotateCcw className="h-8 w-8 animate-spin text-muted-foreground" />
+        <p className="text-slate-400">请先登录</p>
       </div>
     );
   }
 
+  const studentId = session.user.studentId;
+
+  // 使用聚合查询（与 /api/students/me/profile 保持一致）
+  const [student, classmatesProfiles, comments, milestones, activities, scores] =
+    await Promise.all([
+      prisma.student.findUnique({
+        where: { id: studentId },
+        include: {
+          class: { include: { grade: true } },
+          careerProfile: true,
+          user: { select: { email: true, avatar: true } },
+        },
+      }),
+      prisma.careerProfile.findMany({
+        where: {
+          student: {
+            classId: (
+              await prisma.student.findUnique({
+                where: { id: studentId },
+                select: { classId: true },
+              })
+            )?.classId,
+          },
+          studentId: { not: studentId },
+        },
+        select: { fiveDimensions: true },
+      }),
+      prisma.comment.findMany({
+        where: { studentId },
+        orderBy: { createdAt: "desc" },
+        include: { teacher: { select: { name: true, title: true } } },
+      }),
+      prisma.milestone.findMany({
+        where: { studentId },
+        orderBy: { occurredAt: "desc" },
+      }),
+      prisma.activity.findMany({
+        where: { studentId },
+        orderBy: { startDate: "desc" },
+      }),
+      prisma.score.findMany({
+        where: { studentId },
+        orderBy: { examDate: "desc" },
+        include: { exam: true },
+      }),
+    ]);
+
   if (!student) {
-    return <div className="text-center py-12 text-muted-foreground">未找到学生信息</div>;
+    return (
+      <div className="flex items-center justify-center h-[60vh]">
+        <p className="text-slate-400">未找到学生信息</p>
+      </div>
+    );
   }
 
+  // 解析五维数据
+  let dimensions: Record<string, number> = {};
+  if (student.careerProfile?.fiveDimensions) {
+    try {
+      dimensions = JSON.parse(student.careerProfile.fiveDimensions);
+    } catch {
+      dimensions = {};
+    }
+  }
+
+  // 班级平均分
+  const classAverage: Record<string, number> = {};
+  const dimensionScores: Record<string, number[]> = {
+    学业: [], 心理: [], 职业: [], 社交: [], 特长: [],
+  };
+
+  for (const profile of classmatesProfiles) {
+    if (!profile.fiveDimensions) continue;
+    try {
+      const dims = JSON.parse(profile.fiveDimensions) as Record<string, number>;
+      for (const key of DIMENSION_KEYS) {
+        if (typeof dims[key] === "number") dimensionScores[key].push(dims[key]);
+      }
+    } catch {}
+  }
+
+  for (const key of DIMENSION_KEYS) {
+    const values = dimensionScores[key];
+    classAverage[key] =
+      values.length > 0 ? Math.round(values.reduce((a, b) => a + b, 0) / values.length) : 50;
+  }
+
+  const radarData = DIMENSION_KEYS.map((key) => ({
+    dimension: key,
+    score: dimensions[key] || 0,
+    average: classAverage[key] || 50,
+  }));
+
+  const sortedDims = [...radarData].sort((a, b) => b.score - a.score);
+  const strongest = sortedDims[0];
+  const weakest = sortedDims[sortedDims.length - 1];
+
+  // 统计
+  const subjects = [...new Set(scores.map((s) => s.subject))];
+  const totalPoints = activities.reduce((sum, a) => sum + a.points, 0);
+
+  // 时间线数据（全部记录按时间合并）
+  const timeline = [
+    ...scores.map((s) => ({
+      type: "成绩" as const,
+      date: s.examDate,
+      title: `${s.exam?.name || "考试"} · ${s.subject} · ${s.score}分`,
+    })),
+    ...comments.map((c) => ({
+      type: "评语" as const,
+      date: c.createdAt,
+      title: `${c.teacher.name}：${c.content.slice(0, 40)}${c.content.length > 40 ? "..." : ""}`,
+      detail: c.content,
+    })),
+    ...milestones.map((m) => ({
+      type: "里程碑" as const,
+      date: m.occurredAt,
+      title: m.title,
+      status: m.status,
+    })),
+    ...activities.map((a) => ({
+      type: "活动" as const,
+      date: a.startDate,
+      title: `${a.name} +${a.points}积分`,
+    })),
+  ].sort((a, b) => b.date.getTime() - a.date.getTime());
+
   return (
-    <div className="space-y-8">
-      {/* 顶部信息区 */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">成长档案</h1>
-          <p className="text-muted-foreground mt-1">{student.class.grade.name}{student.class.name} · 学号 {student.studentNo}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Badge variant="secondary" className="px-3 py-1 text-sm gap-1">
-            <Flame className="h-3.5 w-3.5" />
-            Lv.{student.careerProfile?.level || 1}
-          </Badge>
-          <Badge variant="outline" className="px-3 py-1 text-sm gap-1">
-            <Award className="h-3.5 w-3.5" />
-            {student.careerProfile?.totalScore || 0} 积分
-          </Badge>
-        </div>
+    <div className="space-y-5">
+      {/* 标题 */}
+      <div>
+        <h1 className="text-lg font-bold text-[#1a3a5c]">成长档案</h1>
+        <p className="text-sm text-slate-400 mt-0.5">
+          {student.name} · {student.class?.grade?.name} · {student.class?.name}
+        </p>
       </div>
 
-      {/* 个人信息 + 五维雷达 */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* 左侧：个人信息 + 统计 */}
-        <div className="lg:col-span-4 space-y-6">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-[#1a3a5c] to-[#2d5a87] flex items-center justify-center text-xl font-bold text-white shrink-0">
-                  {student.name.charAt(0)}
-                </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        {/* 左侧：五维雷达 + 时间线 */}
+        <div className="lg:col-span-2 space-y-5">
+          {/* 五维雷达 */}
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-lg font-bold">{student.name}</h2>
-                  <p className="text-sm text-muted-foreground">{getCurrentGrade(student.graduationYear)} · {student.graduationYear}级</p>
+                  <CardTitle className="text-[15px] text-[#1a3a5c]">五维成长雷达</CardTitle>
+                  <CardDescription className="text-xs text-slate-400 mt-0.5">
+                    个人得分 vs 班级平均（满分100）
+                  </CardDescription>
                 </div>
               </div>
-              <div className="mt-5 space-y-3">
-                <div className="flex items-center gap-3 text-sm">
-                  <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <span className="text-muted-foreground">{student.user.email}</span>
-                </div>
-                <div className="flex items-center gap-3 text-sm">
-                  <User className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <span className="text-muted-foreground">{student.gender === "FEMALE" ? "女" : "男"}</span>
-                </div>
-                <div className="flex items-center gap-3 text-sm">
-                  <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <span className="text-muted-foreground">{new Date(student.enrollmentDate).toLocaleDateString("zh-CN")} 入学</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* 统计 */}
-          <div className="grid grid-cols-2 gap-3">
-            <Card className="border-0 shadow-sm">
-              <CardContent className="p-4 text-center">
-                <p className="text-2xl font-bold text-[#1a3a5c]">{scores.length}</p>
-                <p className="text-xs text-muted-foreground mt-1">考试记录</p>
-              </CardContent>
-            </Card>
-            <Card className="border-0 shadow-sm">
-              <CardContent className="p-4 text-center">
-                <p className="text-2xl font-bold text-[#1a3a5c]">{comments.length}</p>
-                <p className="text-xs text-muted-foreground mt-1">教师评语</p>
-              </CardContent>
-            </Card>
-            <Card className="border-0 shadow-sm">
-              <CardContent className="p-4 text-center">
-                <p className="text-2xl font-bold text-[#1a3a5c]">{milestones.length}</p>
-                <p className="text-xs text-muted-foreground mt-1">里程碑</p>
-              </CardContent>
-            </Card>
-            <Card className="border-0 shadow-sm">
-              <CardContent className="p-4 text-center">
-                <p className="text-2xl font-bold text-[#1a3a5c]">{totalActivities}</p>
-                <p className="text-xs text-muted-foreground mt-1">活动积分</p>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-
-        {/* 右侧：五维雷达 */}
-        <Card className="lg:col-span-8">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">五维成长雷达</CardTitle>
-            <CardDescription>个人综合素养评估 · 满分100</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <ResponsiveContainer width="100%" height={260}>
-                <RadarChart cx="50%" cy="50%" outerRadius="70%" data={radarData}>
-                  <PolarGrid stroke="#e2e8f0" />
-                  <PolarAngleAxis dataKey="dimension" tick={{ fontSize: 13, fill: "#475569" }} />
-                  <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fontSize: 11, fill: "#94a3b8" }} />
-                  <Radar name="个人" dataKey="score" stroke="#1a3a5c" fill="#1a3a5c" fillOpacity={0.15} strokeWidth={2} />
-                  <Legend wrapperStyle={{ fontSize: 12 }} />
-                </RadarChart>
-              </ResponsiveContainer>
-              <div className="space-y-4 flex flex-col justify-center">
-                {radarData.map((d) => (
-                  <div key={d.dimension}>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-sm font-medium text-[#334155]">{d.dimension}</span>
-                      <span className="text-sm font-bold text-[#1a3a5c]">{d.score}</span>
-                    </div>
-                    <Progress value={d.score} max={100} className="h-1.5" />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {d.score >= 80 ? "表现优秀，继续保持" : d.score >= 60 ? "表现良好，有提升空间" : "需要重点关注和加强"}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* 评语 */}
-      {comments.length > 0 && (
-        <div>
-          <h2 className="text-lg font-semibold mb-4">教师评语</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {comments.slice(0, 6).map((c) => (
-              <Card key={c.id} className="border-0 shadow-sm">
-                <CardContent className="p-5">
-                  <p className="text-sm leading-relaxed text-[#334155]">&ldquo;{c.content}&rdquo;</p>
-                  <div className="flex items-center justify-between mt-4 pt-3 border-t border-border/40">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-[#1a3a5c]/10 flex items-center justify-center text-xs font-medium text-[#1a3a5c]">
-                        {c.teacher.name.charAt(0)}
-                      </div>
-                      <span className="text-xs text-muted-foreground">{c.teacher.name}</span>
-                    </div>
-                    <Badge variant="outline" className="text-[10px]">
-                      {c.type === "HOMEROOM" ? "班主任" : "学科"}
-                    </Badge>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* 里程碑 + 活动 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div>
-          <h2 className="text-lg font-semibold mb-4">里程碑</h2>
-          <Card className="border-0 shadow-sm">
-            <CardContent className="p-4">
-              {milestones.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground text-sm">暂无里程碑</div>
-              ) : (
-                <div className="space-y-1">
-                  {milestones.slice(0, 6).map((m) => {
-                    const Icon = TYPE_ICONS[m.type] || Trophy;
-                    return (
-                      <div key={m.id} className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/40 transition-colors">
-                        <div className={`w-9 h-9 rounded-full flex items-center justify-center ${TYPE_COLORS[m.type] || "bg-gray-50 text-gray-500"}`}>
-                          <Icon className="h-4 w-4" />
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FiveDimensionRadar data={radarData} showAverage={true} height={280} />
+                <div className="space-y-3">
+                  {radarData.map((d) => (
+                    <div key={d.dimension}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[13px] font-medium text-[#1a3a5c]">{d.dimension}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[13px] font-bold text-[#1a3a5c]">{d.score}</span>
+                          <span className="text-[11px] text-slate-400">班均 {d.average}</span>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-[#334155] truncate">{m.title}</p>
-                          <p className="text-xs text-muted-foreground">{new Date(m.occurredAt).toLocaleDateString("zh-CN")}</p>
-                        </div>
-                        <Badge variant="outline" className={`text-[10px] shrink-0 ${TYPE_COLORS[m.type] || ""}`}>
-                          {TYPE_LABELS[m.type] || m.type}
-                        </Badge>
                       </div>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        <div>
-          <h2 className="text-lg font-semibold mb-4">活动记录</h2>
-          <Card className="border-0 shadow-sm">
-            <CardContent className="p-4">
-              {activities.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground text-sm">暂无活动记录</div>
-              ) : (
-                <div className="space-y-1">
-                  {activities.slice(0, 6).map((a) => (
-                    <div key={a.id} className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/40 transition-colors">
-                      <div className="w-9 h-9 rounded-full bg-purple-50 flex items-center justify-center">
-                        <Activity className="h-4 w-4 text-purple-600" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-[#334155] truncate">{a.name}</p>
-                        <p className="text-xs text-muted-foreground">{a.role} · {new Date(a.startDate).toLocaleDateString("zh-CN")}</p>
-                      </div>
-                      <Badge variant="secondary" className="text-[10px] shrink-0">+{a.points}分</Badge>
+                      <Progress value={d.score} max={100} className="h-1.5 mb-1" />
+                      <p className="text-[11px] text-slate-400">
+                        {getDimensionInsight(d.score, d.average, d.dimension)}
+                      </p>
                     </div>
                   ))}
                 </div>
-              )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 mt-5 pt-4 border-t border-slate-100">
+                <div className="p-3 rounded-lg bg-green-50 border border-green-200">
+                  <p className="text-[11px] text-green-700 font-semibold mb-1">优势维度</p>
+                  <p className="text-[13px] text-[#1a3a5c] font-medium">
+                    {strongest.dimension} · {strongest.score}分
+                  </p>
+                </div>
+                <div className="p-3 rounded-lg bg-blue-50 border border-blue-200">
+                  <p className="text-[11px] text-blue-700 font-semibold mb-1">建议提升</p>
+                  <p className="text-[13px] text-[#1a3a5c] font-medium">
+                    {weakest.dimension} · {weakest.score}分
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 成长时间线 */}
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-[15px] text-[#1a3a5c]">成长时间线</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Tabs defaultValue="全部">
+                <TabsList className="mb-4">
+                  {["全部", "成绩", "评语", "里程碑", "活动"].map((t) => (
+                    <TabsTrigger key={t} value={t} className="text-[12px]">
+                      {t}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+                {["全部", "成绩", "评语", "里程碑", "活动"].map((filter) => (
+                  <TabsContent key={filter} value={filter}>
+                    <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+                      {timeline
+                        .filter((item) => filter === "全部" || item.type === filter)
+                        .map((item, i) => (
+                          <div key={i} className="flex items-start gap-3 py-2">
+                            <div
+                              className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${
+                                item.type === "成绩"
+                                  ? "bg-blue-500"
+                                  : item.type === "评语"
+                                  ? "bg-purple-500"
+                                  : item.type === "里程碑"
+                                  ? "bg-yellow-500"
+                                  : "bg-green-500"
+                              }`}
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="text-[10px] h-5">
+                                  {item.type}
+                                </Badge>
+                                <span className="text-[11px] text-slate-400">
+                                  {item.date.toLocaleDateString("zh-CN")}
+                                </span>
+                              </div>
+                              <p className="text-[13px] text-[#1a3a5c] mt-1">{item.title}</p>
+                              {"detail" in item && item.detail && (
+                                <p className="text-[12px] text-slate-500 mt-0.5 line-clamp-2">
+                                  {item.detail}
+                                </p>
+                              )}
+                              {"status" in item && item.status && (
+                                <Badge
+                                  className={`text-[10px] mt-1 h-5 ${
+                                    item.status === "APPROVED"
+                                      ? "bg-green-100 text-green-700 border-green-200"
+                                      : item.status === "PENDING"
+                                      ? "bg-yellow-100 text-yellow-700 border-yellow-200"
+                                      : "bg-red-100 text-red-700 border-red-200"
+                                  }`}
+                                >
+                                  {item.status === "APPROVED"
+                                    ? "已通过"
+                                    : item.status === "PENDING"
+                                    ? "待审核"
+                                    : "已拒绝"}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </TabsContent>
+                ))}
+              </Tabs>
             </CardContent>
           </Card>
         </div>
-      </div>
 
-      {/* 成长时间线 */}
-      <div>
-        <h2 className="text-lg font-semibold mb-4">成长轨迹</h2>
-        <Card className="border-0 shadow-sm">
-          <CardContent className="p-6">
-            {(() => {
-              const timeline = [
-                ...comments.map((c) => ({
-                  type: "comment" as const,
-                  date: new Date(c.createdAt),
-                  title: `${c.teacher.name}老师的评语`,
-                  desc: c.content.slice(0, 50) + (c.content.length > 50 ? "..." : ""),
-                  badge: c.type === "HOMEROOM" ? "班主任评语" : "学科评语",
-                  badgeColor: "bg-blue-50 text-blue-600",
-                })),
-                ...milestones.map((m) => ({
-                  type: "milestone" as const,
-                  date: new Date(m.occurredAt),
-                  title: m.title,
-                  desc: TYPE_LABELS[m.type] || m.type,
-                  badge: "里程碑",
-                  badgeColor: TYPE_COLORS[m.type] || "bg-gray-50 text-gray-500",
-                })),
-                ...activities.map((a) => ({
-                  type: "activity" as const,
-                  date: new Date(a.startDate),
-                  title: a.name,
-                  desc: `${a.role} · +${a.points}积分`,
-                  badge: "活动",
-                  badgeColor: "bg-purple-50 text-purple-600",
-                })),
-                ...scores.slice(0, 6).map((s) => ({
-                  type: "score" as const,
-                  date: new Date(s.examDate),
-                  title: `${s.subject} ${s.examType === "MONTHLY" ? "月考" : s.examType === "MIDTERM" ? "期中" : "期末"} · ${s.score}分`,
-                  desc: s.classRank ? `班级排名 第${s.classRank}名` : "",
-                  badge: "成绩",
-                  badgeColor: "bg-orange-50 text-orange-600",
-                })),
-              ].sort((a, b) => b.date.getTime() - a.date.getTime()).slice(0, 12);
-
-              if (timeline.length === 0) return <div className="text-center py-12 text-muted-foreground">暂无成长记录</div>;
-
-              return (
-                <div className="relative">
-                  <div className="absolute left-[23px] top-0 bottom-0 w-px bg-border/60" />
-                  <div className="space-y-0">
-                    {timeline.map((item, i) => (
-                      <div key={i} className="flex gap-5 relative py-3">
-                        <div className="flex flex-col items-center shrink-0 z-10">
-                          <div className="w-12 h-12 rounded-full bg-white border-2 border-border/40 flex items-center justify-center shadow-sm">
-                            {item.type === "comment" ? <MessageSquare className="h-4 w-4 text-blue-500" /> :
-                             item.type === "milestone" ? <Trophy className="h-4 w-4 text-yellow-500" /> :
-                             item.type === "activity" ? <Activity className="h-4 w-4 text-purple-500" /> :
-                             <BookOpen className="h-4 w-4 text-orange-500" />}
-                          </div>
-                        </div>
-                        <div className="flex-1 pt-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs text-muted-foreground">{item.date.toLocaleDateString("zh-CN")}</span>
-                            <Badge variant="outline" className={`text-[10px] ${item.badgeColor}`}>{item.badge}</Badge>
-                          </div>
-                          <p className="text-sm font-medium text-[#334155]">{item.title}</p>
-                          {item.desc && <p className="text-xs text-muted-foreground mt-0.5">{item.desc}</p>}
-                        </div>
-                      </div>
-                    ))}
+        {/* 右侧：各模块独立卡片 */}
+        <div className="space-y-5">
+          {/* 教师评语 */}
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-[15px] text-[#1a3a5c]">
+                教师评语 ({comments.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 max-h-[300px] overflow-y-auto">
+              {comments.length === 0 ? (
+                <p className="text-sm text-slate-400">暂无评语</p>
+              ) : (
+                comments.map((c) => (
+                  <div key={c.id} className="p-3 rounded-lg bg-slate-50">
+                    <p className="text-[13px] text-[#1a3a5c] line-clamp-3">{c.content}</p>
+                    <p className="text-[11px] text-slate-400 mt-1.5">
+                      {c.teacher.name} · {c.createdAt.toLocaleDateString("zh-CN")}
+                    </p>
                   </div>
-                </div>
-              );
-            })()}
-          </CardContent>
-        </Card>
+                ))
+              )}
+            </CardContent>
+          </Card>
+
+          {/* 里程碑 */}
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-[15px] text-[#1a3a5c]">
+                里程碑 ({milestones.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 max-h-[300px] overflow-y-auto">
+              {milestones.length === 0 ? (
+                <p className="text-sm text-slate-400">暂无里程碑</p>
+              ) : (
+                milestones.map((m) => (
+                  <div key={m.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-slate-50">
+                    <div
+                      className={`w-2 h-2 rounded-full shrink-0 ${
+                        m.status === "APPROVED"
+                          ? "bg-green-500"
+                          : m.status === "PENDING"
+                          ? "bg-yellow-500"
+                          : "bg-red-500"
+                      }`}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[13px] text-[#1a3a5c] truncate">{m.title}</p>
+                      <p className="text-[11px] text-slate-400">
+                        {m.occurredAt.toLocaleDateString("zh-CN")}
+                      </p>
+                    </div>
+                    <Badge
+                      className={`text-[10px] shrink-0 h-5 ${
+                        m.status === "APPROVED"
+                          ? "bg-green-100 text-green-700 border-green-200"
+                          : m.status === "PENDING"
+                          ? "bg-yellow-100 text-yellow-700 border-yellow-200"
+                          : "bg-red-100 text-red-700 border-red-200"
+                      }`}
+                    >
+                      {m.status === "APPROVED" ? "已通过" : m.status === "PENDING" ? "待审核" : "已拒绝"}
+                    </Badge>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+
+          {/* 活动记录 */}
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-[15px] text-[#1a3a5c]">
+                活动记录 ({activities.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 max-h-[300px] overflow-y-auto">
+              {activities.length === 0 ? (
+                <p className="text-sm text-slate-400">暂无活动记录</p>
+              ) : (
+                activities.map((a) => (
+                  <div key={a.id} className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50">
+                    <div className="min-w-0">
+                      <p className="text-[13px] text-[#1a3a5c] truncate">{a.name}</p>
+                      <p className="text-[11px] text-slate-400">
+                        {a.startDate.toLocaleDateString("zh-CN")} · {a.role || "参与者"}
+                      </p>
+                    </div>
+                    <Badge variant="outline" className="text-[11px] shrink-0 border-yellow-200 text-yellow-700 bg-yellow-50">
+                      +{a.points}
+                    </Badge>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+
+          {/* 综合统计 */}
+          <Card className="border-0 shadow-sm bg-[#1a3a5c] text-white">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-[15px]">综合统计</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { label: "考试记录", value: scores.length },
+                  { label: "教师评语", value: comments.length },
+                  { label: "里程碑", value: milestones.length },
+                  { label: "活动积分", value: totalPoints },
+                ].map((stat) => (
+                  <div key={stat.label} className="text-center p-2 rounded-lg bg-white/10">
+                    <p className="text-lg font-bold">{stat.value}</p>
+                    <p className="text-[11px] text-white/70">{stat.label}</p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

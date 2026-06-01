@@ -4,29 +4,6 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import dynamic from "next/dynamic";
 
-// 延迟加载各角色的 Dashboard（减少首屏 bundle）
-const StudentDashboard = dynamic(
-  () =>
-    import("@/components/dashboard/student-dashboard").then(
-      (mod) => mod.StudentDashboard
-    ),
-  {
-    loading: () => <DashboardSkeleton />,
-    ssr: true,
-  }
-);
-
-const TeacherDashboard = dynamic(
-  () =>
-    import("@/components/dashboard/teacher-dashboard").then(
-      (mod) => mod.TeacherDashboard
-    ),
-  {
-    loading: () => <DashboardSkeleton />,
-    ssr: true,
-  }
-);
-
 const AdminDashboard = dynamic(
   () =>
     import("@/components/dashboard/admin-dashboard").then(
@@ -38,7 +15,6 @@ const AdminDashboard = dynamic(
   }
 );
 
-// 加载骨架屏
 function DashboardSkeleton() {
   return (
     <div className="space-y-6 animate-pulse">
@@ -58,24 +34,16 @@ function DashboardSkeleton() {
   );
 }
 
-export default async function DashboardPage() {
+export default async function AdminDashboardPage() {
   const session = await getServerSession(authOptions);
 
-  if (!session?.user) {
+  if (!session?.user || session.user.role !== "ADMIN") {
     redirect("/login");
   }
 
-  const role = session.user.role;
-
   return (
     <Suspense fallback={<DashboardSkeleton />}>
-      {role === "STUDENT" && (
-        <StudentDashboard studentId={session.user.studentId!} />
-      )}
-      {role === "TEACHER" && (
-        <TeacherDashboard teacherId={session.user.teacherId!} />
-      )}
-      {role === "ADMIN" && <AdminDashboard />}
+      <AdminDashboard />
     </Suspense>
   );
 }
