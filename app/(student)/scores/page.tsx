@@ -247,7 +247,7 @@ export default function ScoresPage() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis dataKey="date" tick={{ fontSize: 11 }} />
                 <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} />
-                <Tooltip formatter={(value: any, name: string) => [`${value}%`, name]} />
+                <Tooltip formatter={(value: unknown) => [`${value}%`, ""]} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
                 {subjects.map((subj, i) => (
                   <Line

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FiveDimensionRadar } from "@/components/radar-chart";
+import { SixDimensionRadar } from "@/components/radar-chart";
 import { BarChart3, Users, TrendingUp, Award, BookOpen } from "lucide-react";
 
 interface ClassStat {
@@ -141,7 +141,7 @@ export default function ClassProfilePage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <FiveDimensionRadar data={radarData} height={350} />
+              <SixDimensionRadar data={radarData.map(d => ({ dimension: d.dimension, current: d.score }))} height={350} />
             </CardContent>
           </Card>
         </div>

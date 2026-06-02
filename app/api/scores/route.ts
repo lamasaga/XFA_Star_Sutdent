@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { parsePagination, buildPaginatedResponse } from "@/lib/pagination";
+import { refreshStudentDimensions } from "@/lib/dimension-calculator";
 
 // GET - 获取成绩（带分页）
 export async function GET(req: NextRequest) {
@@ -71,7 +72,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST - 录入成绩（教师/管理员）
+// POST - 录入成绩（教师/管理员，支持批量）
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
 
@@ -84,6 +85,47 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
+
+    // 支持批量录入
+    if (body.scores && Array.isArray(body.scores)) {
+      const { scores, subject, examType, semester, total = 100 } = body;
+
+      const created = await prisma.$transaction(
+        scores.map((s: { studentId: string; score: number; classRank?: number; gradeRank?: number }) =>
+          prisma.score.create({
+            data: {
+              studentId: s.studentId,
+              subject,
+              examType: examType || "MONTHLY",
+              score: parseFloat(String(s.score)),
+              total: parseFloat(String(total)),
+              classRank: s.classRank,
+              gradeRank: s.gradeRank,
+              semester: semester || "2024-2025-1",
+              examDate: new Date(),
+            },
+          })
+        )
+      );
+
+      // 异步触发六维分数重算（不等待完成）
+      const affectedStudentIds = [...new Set(scores.map((s: { studentId: string }) => s.studentId))] as string[];
+      Promise.allSettled(
+        affectedStudentIds.map((studentId: string) =>
+          refreshStudentDimensions(studentId).catch((err: Error) => {
+            console.error(`重算学生 ${studentId} 六维分数失败:`, err);
+          })
+        )
+      );
+
+      return Response.json({
+        success: true,
+        count: created.length,
+        message: `成功录入 ${created.length} 条成绩记录`,
+      });
+    }
+
+    // 单条录入（兼容旧接口）
     const {
       studentId,
       subject,

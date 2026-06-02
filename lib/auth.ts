@@ -44,6 +44,7 @@ export const authOptions: NextAuthOptions = {
               teacher: {
                 select: {
                   id: true,
+                  teacherRole: true,
                 },
               },
             },
@@ -73,6 +74,7 @@ export const authOptions: NextAuthOptions = {
             role: user.role,
             studentId: user.student?.id,
             teacherId: user.teacher?.id,
+            teacherRole: user.teacher?.teacherRole,
             classId: user.student?.classId,
           };
           devLog("[AUTH] Returning user:", result);
@@ -96,6 +98,7 @@ export const authOptions: NextAuthOptions = {
         token.role = user.role;
         token.studentId = user.studentId;
         token.teacherId = user.teacherId;
+        token.teacherRole = user.teacherRole;
         token.classId = user.classId;
       }
       return token;
@@ -106,6 +109,7 @@ export const authOptions: NextAuthOptions = {
         session.user.role = token.role as string;
         session.user.studentId = token.studentId as string | undefined;
         session.user.teacherId = token.teacherId as string | undefined;
+        session.user.teacherRole = token.teacherRole as string | undefined;
         session.user.classId = token.classId as string | undefined;
       }
       return session;

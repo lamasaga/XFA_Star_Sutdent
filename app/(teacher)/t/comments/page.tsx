@@ -18,6 +18,14 @@ export default async function CommentsPage({
   const teacherId = session.user.teacherId;
   const preselectedStudentId = typeof searchParams?.studentId === "string" ? searchParams.studentId : undefined;
 
+  // 获取教师信息（含任教科目）
+  const teacher = await prisma.teacher.findUnique({
+    where: { id: teacherId },
+    select: { subjects: true },
+  });
+
+  const subjects: string[] = Array.isArray(teacher?.subjects) ? (teacher?.subjects as string[]) : [];
+
   // 获取教师负责的班级和学生
   const teacherClasses = await prisma.teacherClass.findMany({
     where: { teacherId },
@@ -51,7 +59,7 @@ export default async function CommentsPage({
         <p className="text-muted-foreground">为我的学生撰写评语，支持 AI 辅助生成</p>
       </div>
 
-      <CommentEditor students={students} preselectedStudentId={preselectedStudentId} />
+      <CommentEditor students={students} preselectedStudentId={preselectedStudentId} subjects={subjects} />
     </div>
   );
 }

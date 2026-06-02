@@ -99,6 +99,7 @@ model Student {
   moodEntries     MoodEntry[]
   careerProfile   CareerProfile?
   semesterReports SemesterReport[]
+  warnings        Warning[]
 
   @@map("students")
 }
@@ -263,7 +264,7 @@ model Activity {
 model CareerProfile {
   id                String    @id @default(cuid())
   studentId         String    @unique @map("student_id")
-  fiveDimensions    String    @map("five_dimensions") // {学业, 心理, 职业, 社交, 特长} JSON
+  sixDimensions     String    @default("{}") @map("six_dimensions") // {逻辑, 创新, 表达, 才情, 身心, 德行} JSON
   dimensionHistory  String    @map("dimension_history") // 历史变化数组 JSON
   totalScore        Int       @default(0) @map("total_score")
   level             Int       @default(1)
@@ -297,6 +298,27 @@ model SemesterReport {
 }
 
 // ==================== 系统配置 ====================
+
+model Warning {
+  id          String    @id @default(cuid())
+  studentId   String    @map("student_id")
+  type        String    // PSYCHOLOGY / IMBALANCE / DECAY / DISCIPLINE / LOW_ENGAGEMENT
+  severity    String    // HIGH / MEDIUM / LOW / INFO
+  description String
+  triggeredAt DateTime  @map("triggered_at")
+  status      String    @default("PENDING") // PENDING / PROCESSING / RESOLVED / OBSERVING
+  resolvedAt  DateTime? @map("resolved_at")
+  resolution  String?   // 处理结果摘要
+  handledBy   String?   @map("handled_by") // 处理教师ID
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  student     Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId, status])
+  @@index([type, severity])
+  @@index([status, createdAt])
+  @@map("warnings")
+}
 
 model SystemSetting {
   id          String    @id @default(cuid())

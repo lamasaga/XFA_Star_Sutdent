@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { studentId, type, content, semester, dimensions } = body;
+    const { studentId, type, content, semester, dimensions, dimensionTags } = body;
 
     if (!studentId || !content) {
       return Response.json({ error: "缺少必要参数" }, { status: 400 });
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
         type: type || "HOMEROOM",
         content,
         semester: semester || "2024-2025-1",
-        dimensions: dimensions || null,
+        dimensions: dimensions || JSON.stringify(dimensionTags || {}) || null,
       },
       include: {
         teacher: {

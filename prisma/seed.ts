@@ -234,18 +234,20 @@ async function main() {
     await prisma.careerProfile.create({
       data: {
         studentId: student.id,
-        fiveDimensions: JSON.stringify(isZhangMing ? {
-          学业: 82,
-          心理: 78,
-          职业: 65,
-          社交: 88,
-          特长: 75,
+        sixDimensions: JSON.stringify(isZhangMing ? {
+          逻辑: 82,
+          创新: 75,
+          表达: 78,
+          才情: 80,
+          身心: 85,
+          德行: 88,
         } : {
-          学业: Math.floor(Math.random() * 40) + 60,
-          心理: Math.floor(Math.random() * 30) + 70,
-          职业: Math.floor(Math.random() * 50) + 50,
-          社交: Math.floor(Math.random() * 40) + 60,
-          特长: Math.floor(Math.random() * 50) + 50,
+          逻辑: Math.floor(Math.random() * 40) + 60,
+          创新: Math.floor(Math.random() * 30) + 55,
+          表达: Math.floor(Math.random() * 40) + 55,
+          才情: Math.floor(Math.random() * 50) + 50,
+          身心: Math.floor(Math.random() * 30) + 65,
+          德行: Math.floor(Math.random() * 40) + 60,
         }),
         dimensionHistory: JSON.stringify([]),
         totalScore: isZhangMing ? 245 : Math.floor(Math.random() * 200) + 100,

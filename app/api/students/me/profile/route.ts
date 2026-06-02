@@ -41,7 +41,7 @@ export async function GET() {
             },
             studentId: { not: studentId },
           },
-          select: { fiveDimensions: true },
+          select: { sixDimensions: true },
         }),
 
         // 3. 全部教师评语
@@ -78,9 +78,9 @@ export async function GET() {
 
     // 解析五维数据
     let dimensions: Record<string, number> = {};
-    if (student.careerProfile?.fiveDimensions) {
+    if (student.careerProfile?.sixDimensions) {
       try {
-        dimensions = JSON.parse(student.careerProfile.fiveDimensions);
+        dimensions = JSON.parse(student.careerProfile.sixDimensions);
       } catch {
         dimensions = {};
       }
@@ -93,9 +93,9 @@ export async function GET() {
     };
 
     for (const profile of classmatesProfiles) {
-      if (!profile.fiveDimensions) continue;
+      if (!profile.sixDimensions) continue;
       try {
-        const dims = JSON.parse(profile.fiveDimensions) as Record<string, number>;
+        const dims = JSON.parse(profile.sixDimensions) as Record<string, number>;
         for (const key of DIMENSION_KEYS) {
           if (typeof dims[key] === "number") {
             dimensionScores[key].push(dims[key]);
@@ -124,8 +124,8 @@ export async function GET() {
 
     return Response.json({
       student,
-      fiveDimensions: dimensions,
-      fiveDimensionsAverage: classAverage,
+      sixDimensions: dimensions,
+      sixDimensionsAverage: classAverage,
       comments,
       milestones,
       activities,

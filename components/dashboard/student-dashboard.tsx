@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { FiveDimensionRadar } from "@/components/radar-chart";
+import { SixDimensionRadar } from "@/components/radar-chart";
 import { ScoreTrendChart } from "@/components/score-trend-chart";
 import { createCachedQuery, CACHE_TAGS } from "@/lib/cache";
 import Link from "next/link";
@@ -40,7 +40,7 @@ const getStudentData = cache(async (studentId: string) => {
         }))?.classId },
         studentId: { not: studentId },
       },
-      select: { fiveDimensions: true },
+      select: { sixDimensions: true },
     }),
     // 3. 最近心情记录（取30天用于计算连续记录）
     prisma.moodEntry.findMany({
@@ -103,9 +103,9 @@ const getStudentData = cache(async (studentId: string) => {
   };
 
   for (const profile of classmatesProfiles) {
-    if (!profile.fiveDimensions) continue;
+    if (!profile.sixDimensions) continue;
     try {
-      const dims = JSON.parse(profile.fiveDimensions) as Record<string, number>;
+      const dims = JSON.parse(profile.sixDimensions) as Record<string, number>;
       for (const key of DIMENSION_KEYS) {
         if (typeof dims[key] === "number") {
           dimensionScores[key].push(dims[key]);
@@ -170,11 +170,11 @@ const getStudentData = cache(async (studentId: string) => {
     }));
   }
 
-  // 解析学生自己的五维数据（只解析一次）
+  // 解析学生自己的六维数据（只解析一次）
   let dimensions: Record<string, number> = {};
-  if (student.careerProfile?.fiveDimensions) {
+  if (student.careerProfile?.sixDimensions) {
     try {
-      dimensions = JSON.parse(student.careerProfile.fiveDimensions);
+      dimensions = JSON.parse(student.careerProfile.sixDimensions);
     } catch {
       dimensions = {};
     }
@@ -204,7 +204,7 @@ const getCachedClassAverage = createCachedQuery(
         student: { classId },
         studentId: { not: studentId },
       },
-      select: { fiveDimensions: true },
+      select: { sixDimensions: true },
     });
 
     const result: Record<string, number> = {};
@@ -213,9 +213,9 @@ const getCachedClassAverage = createCachedQuery(
     };
 
     for (const profile of profiles) {
-      if (!profile.fiveDimensions) continue;
+      if (!profile.sixDimensions) continue;
       try {
-        const dims = JSON.parse(profile.fiveDimensions) as Record<string, number>;
+        const dims = JSON.parse(profile.sixDimensions) as Record<string, number>;
         for (const key of DIMENSION_KEYS) {
           if (typeof dims[key] === "number") scores[key].push(dims[key]);
         }
@@ -328,7 +328,7 @@ export async function StudentDashboard({ studentId }: { studentId: string }) {
             </CardHeader>
             <CardContent className="pt-5">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FiveDimensionRadar data={radarData} showAverage={true} height={280} />
+                <SixDimensionRadar data={radarData.map(d => ({ dimension: d.dimension, current: d.score }))} height={280} />
                 <div className="space-y-3">
                   {radarData.map((d) => (
                     <div key={d.dimension}>

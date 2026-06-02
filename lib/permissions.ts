@@ -55,7 +55,33 @@ export function forbiddenResponse() {
 export function canAccessStudent(session: Awaited<ReturnType<typeof getSession>>, studentId: string): boolean {
   if (!session?.user) return false;
   if (session.user.role === ADMIN) return true;
-  if (session.user.role === TEACHER) return true; // 教师可在后续做更细控制
+  // 学生只能访问自己的数据
   if (session.user.role === STUDENT && session.user.studentId === studentId) return true;
   return false;
+}
+
+// 检查教师是否有权访问某学生（API路由用）
+export async function canTeacherAccessStudent(
+  session: Awaited<ReturnType<typeof getSession>>,
+  studentId: string
+): Promise<boolean> {
+  if (!session?.user || !session.user.teacherId) return false;
+
+  // 心理老师可以看全校
+  if (session.user.teacherRole === "PSYCHOLOGY") return true;
+
+  const { prisma } = await import("./prisma");
+
+  const tcs = await prisma.teacherClass.findMany({
+    where: { teacherId: session.user.teacherId },
+    select: { classId: true },
+  });
+  const classIds = tcs.map((tc) => tc.classId);
+
+  const student = await prisma.student.findUnique({
+    where: { id: studentId },
+    select: { classId: true },
+  });
+
+  return student ? classIds.includes(student.classId) : false;
 }

@@ -14,9 +14,16 @@ import {
   Target,
   CheckCircle2,
   Flame,
+  Radar,
 } from "lucide-react";
 import { MoodQuickRecord } from "@/components/mood-quick-record";
 import Link from "next/link";
+import {
+  SIX_DIMENSIONS,
+  getDimensionLabel,
+  getGradeBenchmark,
+  mapLegacyToSixDimensions,
+} from "@/lib/dimension-utils";
 
 const QUICK_LINKS = [
   { href: "/assessments", title: "心理测评", desc: "了解自己", icon: Brain, color: "bg-blue-50 text-blue-700" },
@@ -52,7 +59,7 @@ export default async function DashboardPage() {
         select: {
           name: true,
           class: { select: { name: true, grade: { select: { name: true } } } },
-          careerProfile: { select: { level: true, totalScore: true } },
+          careerProfile: { select: { level: true, totalScore: true, sixDimensions: true } },
         },
       }),
       generateTodos(studentId),
@@ -85,6 +92,34 @@ export default async function DashboardPage() {
 
   const level = student?.careerProfile?.level || 1;
   const points = student?.careerProfile?.totalScore || 0;
+
+  // 六维数据（兼容旧五维格式）
+  const gradeName = student?.class?.grade?.name || "高一";
+  const benchmark = getGradeBenchmark(gradeName);
+  let sixDimScores: Record<string, number> = {};
+  if (student?.careerProfile?.sixDimensions) {
+    try {
+      const dims = JSON.parse(student.careerProfile.sixDimensions);
+      if (dims["学业"]) {
+        // 旧五维格式，需要转换
+        sixDimScores = mapLegacyToSixDimensions(dims);
+      } else {
+        // 新六维格式
+        sixDimScores = dims;
+      }
+    } catch {
+      sixDimScores = {};
+    }
+  }
+  // 填充默认值
+  const sixDimOverview = SIX_DIMENSIONS.map((dim) => {
+    const score = sixDimScores[dim.key] || benchmark + 36;
+    return {
+      ...dim,
+      score,
+      label: getDimensionLabel(score, benchmark),
+    };
+  });
 
   // 计算心情连续记录天数
   let moodStreak = 0;
@@ -235,6 +270,58 @@ export default async function DashboardPage() {
                   </div>
                 ))
               )}
+            </CardContent>
+          </Card>
+
+          {/* 六维概览 */}
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-3 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Radar className="w-4 h-4 text-[#1a3a5c]" />
+                <CardTitle className="text-[15px] text-[#1a3a5c]">六维概览</CardTitle>
+              </div>
+              <Link href="/profile">
+                <Button variant="ghost" size="sm" className="h-7 text-[11px] text-[#4a90d9]">
+                  查看详情
+                </Button>
+              </Link>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {sixDimOverview.map((dim) => (
+                  <Link key={dim.key} href="/profile">
+                    <div className="p-3 rounded-lg border border-slate-100 hover:border-slate-200 hover:shadow-sm transition-all cursor-pointer">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-lg">{dim.icon}</span>
+                        <span className="text-[13px] font-medium text-[#1a3a5c]">{dim.key}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-bold" style={{ color: dim.color }}>
+                          {dim.score}
+                        </span>
+                        <span
+                          className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
+                          style={{
+                            color: dim.label.color,
+                            backgroundColor: dim.label.bgColor,
+                          }}
+                        >
+                          {dim.label.label}
+                        </span>
+                      </div>
+                      <div className="mt-2 h-1 rounded-full bg-slate-100 overflow-hidden">
+                        <div
+                          className="h-full rounded-full"
+                          style={{
+                            width: `${Math.min(100, Math.round(((dim.score - benchmark) / 60) * 100))}%`,
+                            backgroundColor: dim.color,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
             </CardContent>
           </Card>
 

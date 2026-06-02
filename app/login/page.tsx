@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { signIn } from "next-auth/react";
+import { signIn, getSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,7 +31,16 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/dashboard");
+    // 登录成功后获取 session 中的角色信息
+    const session = await getSession();
+    const role = session?.user?.role;
+    if (role === "ADMIN") {
+      router.push("/admin");
+    } else if (role === "TEACHER") {
+      router.push("/teacher");
+    } else {
+      router.push("/dashboard");
+    }
     router.refresh();
   }
 
