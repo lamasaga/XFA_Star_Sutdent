@@ -94,14 +94,21 @@ export async function POST(req: NextRequest) {
         graduationYear: student.graduationYear,
         currentGradeLevel,
         targetGradeLevel: gradeInfo.level,
+        targetClassId,
       });
+    }
 
-      if (!dryRun) {
-        await prisma.student.update({
-          where: { id: student.id },
-          data: { classId: targetClassId },
-        });
-      }
+    // 批量执行升级（事务保护）
+    if (!dryRun && upgrades.length > 0) {
+      await prisma.$transaction(
+        upgrades.map((u) =>
+          prisma.student.update({
+            where: { id: u.studentId },
+            data: { classId: u.targetClassId },
+          })
+        )
+      );
+    }
     }
 
     return Response.json({

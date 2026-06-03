@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SixDimensionRadar } from "@/components/radar-chart";
 import { BarChart3, Users, TrendingUp, Award, BookOpen } from "lucide-react";
+import { SIX_DIMENSIONS, getDimensionLabel } from "@/lib/dimension-utils";
 
 interface ClassStat {
   id: string;
@@ -12,7 +13,7 @@ interface ClassStat {
   gradeName: string;
   studentCount: number;
   avgScore: number;
-  fiveDimensions: Record<string, number>;
+  sixDimensions: Record<string, number>;
 }
 
 export default function ClassProfilePage() {
@@ -21,7 +22,7 @@ export default function ClassProfilePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 模拟获取班级数据
+    // TODO: 从API获取真实班级数据
     setTimeout(() => {
       setClasses([
         {
@@ -30,7 +31,7 @@ export default function ClassProfilePage() {
           gradeName: "高一",
           studentCount: 25,
           avgScore: 78.5,
-          fiveDimensions: { 学业: 75, 心理: 82, 职业: 65, 社交: 80, 特长: 70 },
+          sixDimensions: { 逻辑: 75, 创新: 65, 表达: 80, 才情: 70, 身心: 82, 德行: 78 },
         },
         {
           id: "2",
@@ -38,7 +39,7 @@ export default function ClassProfilePage() {
           gradeName: "高一",
           studentCount: 24,
           avgScore: 80.2,
-          fiveDimensions: { 学业: 78, 心理: 80, 职业: 68, 社交: 78, 特长: 72 },
+          sixDimensions: { 逻辑: 78, 创新: 68, 表达: 78, 才情: 72, 身心: 80, 德行: 76 },
         },
       ]);
       setLoading(false);
@@ -48,14 +49,13 @@ export default function ClassProfilePage() {
   const currentClass = classes.find((c) => c.id === selectedClass);
 
   const radarData = currentClass
-    ? [
-        { dimension: "学业", score: currentClass.fiveDimensions["学业"] || 0 },
-        { dimension: "心理", score: currentClass.fiveDimensions["心理"] || 0 },
-        { dimension: "职业", score: currentClass.fiveDimensions["职业"] || 0 },
-        { dimension: "社交", score: currentClass.fiveDimensions["社交"] || 0 },
-        { dimension: "特长", score: currentClass.fiveDimensions["特长"] || 0 },
-      ]
+    ? SIX_DIMENSIONS.map((dim) => ({
+        dimension: dim.key,
+        current: currentClass.sixDimensions[dim.key] || 0,
+      }))
     : [];
+
+  const benchmark = 170; // 高一基准分
 
   return (
     <div className="space-y-6">
@@ -113,8 +113,10 @@ export default function ClassProfilePage() {
               <CardContent className="flex items-center gap-4 pt-6">
                 <TrendingUp className="h-8 w-8 text-purple-500" />
                 <div>
-                  <p className="text-2xl font-bold">{Object.values(currentClass.fiveDimensions).reduce((a, b) => a + b, 0) / 5}</p>
-                  <p className="text-sm text-muted-foreground">五维均分</p>
+                  <p className="text-2xl font-bold">
+                    {Object.values(currentClass.sixDimensions).reduce((a, b) => a + b, 0) / 6}
+                  </p>
+                  <p className="text-sm text-muted-foreground">六维均分</p>
                 </div>
               </CardContent>
             </Card>
@@ -129,19 +131,57 @@ export default function ClassProfilePage() {
             </Card>
           </div>
 
-          {/* 五维雷达图 */}
+          {/* 六维雷达图 */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BarChart3 className="h-5 w-5" />
-                班级五维雷达
+                班级六维雷达
               </CardTitle>
               <CardDescription>
                 {currentClass.gradeName}{currentClass.name} 班级平均水平（满分100）
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <SixDimensionRadar data={radarData.map(d => ({ dimension: d.dimension, current: d.score }))} height={350} />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <SixDimensionRadar
+                  data={radarData.map((d) => ({ dimension: d.dimension, current: d.current }))}
+                  benchmark={benchmark}
+                  height={350}
+                />
+                <div className="space-y-2">
+                  {SIX_DIMENSIONS.map((dim) => {
+                    const score = currentClass.sixDimensions[dim.key] || 0;
+                    const label = getDimensionLabel(score, benchmark);
+                    const pct = Math.min(100, Math.round(((score - benchmark) / 60) * 100));
+                    return (
+                      <div key={dim.key} className="flex items-center gap-3">
+                        <span className="text-lg">{dim.icon}</span>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-0.5">
+                            <span className="text-[13px] font-medium text-[#1a3a5c]">{dim.key}</span>
+                            <span
+                              className="text-[11px] px-1.5 py-0.5 rounded-full font-medium"
+                              style={{ color: label.color, backgroundColor: label.bgColor }}
+                            >
+                              {label.label}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                              <div
+                                className="h-full rounded-full transition-all"
+                                style={{ width: `${pct}%`, backgroundColor: dim.color }}
+                              />
+                            </div>
+                            <span className="text-[11px] text-slate-500 w-10 text-right">{score}</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>

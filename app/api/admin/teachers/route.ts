@@ -77,6 +77,7 @@ export async function POST(req: NextRequest) {
       subjects,
       teacherRole = "SUBJECT",
       classIds,
+      homeroomClassId,
     } = body;
 
     if (!name || !email) {
@@ -125,8 +126,27 @@ export async function POST(req: NextRequest) {
         data: classIds.map((classId: string) => ({
           teacherId: user.teacher!.id,
           classId,
-          isHomeroom: false,
+          isHomeroom: homeroomClassId === classId,
         })),
+      });
+    }
+
+    // 如果单独指定了班主任班级（不在classIds中）
+    if (homeroomClassId && (!classIds || !classIds.includes(homeroomClassId))) {
+      await prisma.teacherClass.create({
+        data: {
+          teacherId: user.teacher!.id,
+          classId: homeroomClassId,
+          isHomeroom: true,
+        },
+      });
+    }
+
+    // 如果设置了班主任，更新 teacherRole
+    if (homeroomClassId) {
+      await prisma.teacher.update({
+        where: { id: user.teacher!.id },
+        data: { teacherRole: "HOMEROOM" },
       });
     }
 

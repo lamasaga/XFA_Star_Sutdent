@@ -61,6 +61,7 @@ export async function PUT(
       subjects,
       teacherRole,
       classIds,
+      homeroomClassId,
     } = body;
 
     const existing = await prisma.teacher.findUnique({
@@ -106,9 +107,9 @@ export async function PUT(
 
     // 更新班级关联
     if (classIds && Array.isArray(classIds)) {
-      // 删除现有非班主任关联，保留班主任关系
+      // 先清除所有班级关联
       await prisma.teacherClass.deleteMany({
-        where: { teacherId: id, isHomeroom: false },
+        where: { teacherId: id },
       });
 
       if (classIds.length > 0) {
@@ -116,10 +117,42 @@ export async function PUT(
           data: classIds.map((classId: string) => ({
             teacherId: id,
             classId,
-            isHomeroom: false,
+            isHomeroom: homeroomClassId === classId,
           })),
         });
       }
+    }
+
+    // 如果单独指定了班主任班级
+    if (homeroomClassId && (!classIds || !classIds.includes(homeroomClassId))) {
+      // 先清除该教师的班主任标记
+      await prisma.teacherClass.updateMany({
+        where: { teacherId: id, isHomeroom: true },
+        data: { isHomeroom: false },
+      });
+      // 设置新的班主任关联
+      await prisma.teacherClass.upsert({
+        where: {
+          teacherId_classId: {
+            teacherId: id,
+            classId: homeroomClassId,
+          },
+        },
+        create: {
+          teacherId: id,
+          classId: homeroomClassId,
+          isHomeroom: true,
+        },
+        update: { isHomeroom: true },
+      });
+    }
+
+    // 如果设置了班主任，更新 teacherRole
+    if (homeroomClassId && !teacherRole) {
+      await prisma.teacher.update({
+        where: { id },
+        data: { teacherRole: "HOMEROOM" },
+      });
     }
 
     // 重新查询完整数据

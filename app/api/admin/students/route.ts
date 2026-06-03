@@ -37,17 +37,18 @@ export async function GET(req: NextRequest) {
     }
 
     // gradeId 筛选：通过 class 关联
-    let classFilter: string[] | undefined;
-    if (gradeId) {
+    // 如果同时传入 classId 和 gradeId，优先使用 classId（班级已唯一确定年级）
+    if (gradeId && !classId) {
       const classes = await prisma.class.findMany({
         where: { gradeId },
         select: { id: true },
       });
-      classFilter = classes.map((c) => c.id);
+      const classFilter = classes.map((c) => c.id);
       if (classFilter.length > 0) {
-        where.classId = classId
-          ? { in: classFilter, equals: classId }
-          : { in: classFilter };
+        where.classId = { in: classFilter };
+      } else {
+        // 该年级下没有班级，返回空结果
+        where.classId = "";
       }
     }
 

@@ -56,7 +56,7 @@ async function getSixDimensionData(studentId: string, gradeName: string): Promis
 
   const benchmark = getGradeBenchmark(gradeName);
 
-  // 从 sixDimensions 读取六维数据
+  // 从 sixDimensions 读取当前六维数据
   let sixDimData: Record<string, number> = {};
   if (careerProfile?.sixDimensions) {
     try {
@@ -66,9 +66,33 @@ async function getSixDimensionData(studentId: string, gradeName: string): Promis
     }
   }
 
+  // 从 dimensionHistory 读取历史数据（取最近一条作为上学期）
+  let previousData: Record<DimensionKey, { score: number }> | undefined;
+  if (careerProfile?.dimensionHistory) {
+    try {
+      const history = JSON.parse(careerProfile.dimensionHistory) as Array<{
+        semester: string;
+        scores: Record<DimensionKey, number>;
+      }>;
+      if (history.length > 1) {
+        const prev = history[history.length - 2]; // 倒数第二条（上学期）
+        previousData = Object.fromEntries(
+          Object.entries(prev.scores).map(([k, v]) => [k, { score: v }])
+        ) as Record<DimensionKey, { score: number }>;
+      }
+    } catch {
+      previousData = undefined;
+    }
+  }
+
   // 有数据则构建完整结构，无数据使用演示数据
   if (Object.keys(sixDimData).length > 0) {
-    return buildSixDimensionFromScores(sixDimData as Record<DimensionKey, number>, benchmark, gradeName);
+    return buildSixDimensionFromScores(
+      sixDimData as Record<DimensionKey, number>,
+      benchmark,
+      gradeName,
+      previousData
+    );
   }
 
   return generateDemoDimensionData(gradeName);
@@ -80,7 +104,8 @@ async function getSixDimensionData(studentId: string, gradeName: string): Promis
 function buildSixDimensionFromScores(
   scores: Record<DimensionKey, number>,
   benchmark: number,
-  gradeName: string
+  gradeName: string,
+  previousData?: Record<DimensionKey, { score: number }>
 ): SixDimensionData {
   const current: SixDimensionData["current"] = {} as any;
 
@@ -105,6 +130,12 @@ function buildSixDimensionFromScores(
     const performance = Math.min(12, remaining * 0.6);
     const excellence = Math.min(12, remaining - performance);
 
+    // 计算环比变化（相对于上学期）
+    let change = 0;
+    if (previousData?.[dim.key]?.score) {
+      change = score - previousData[dim.key].score;
+    }
+
     current[dim.key] = {
       score,
       benchmark,
@@ -115,12 +146,22 @@ function buildSixDimensionFromScores(
         excellence: Math.round(excellence),
       },
       label: getDimensionLabel(score, benchmark),
-      change: Math.round((Math.random() - 0.3) * 10),
+      change,
     };
   }
 
+  const previous: Record<DimensionKey, { score: number }> | undefined = previousData
+    ? Object.fromEntries(
+        SIX_DIMENSIONS.map((dim) => [
+          dim.key,
+          { score: previousData[dim.key]?.score || benchmark + 36 },
+        ])
+      ) as Record<DimensionKey, { score: number }>
+    : undefined;
+
   return {
     current,
+    previous,
     semester: "2025-2026-1",
     gradeName,
   };
