@@ -385,7 +385,7 @@ export default async function DashboardPage() {
               </div>
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[13px] text-[#1a3a5c]">五维自评</span>
+                  <span className="text-[13px] text-[#1a3a5c]">六维自评</span>
                   <span className="text-[11px] text-slate-400">0/1 ⚠️</span>
                 </div>
                 <Progress value={0} max={1} className="h-1.5" />

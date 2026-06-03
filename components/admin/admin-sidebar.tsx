@@ -16,6 +16,7 @@ import {
   LogOut,
   Shield,
 } from "lucide-react";
+import { signOut } from "next-auth/react";
 import { useState } from "react";
 
 interface NavItem {
@@ -102,6 +103,7 @@ export function AdminSidebar({ user }: AdminSidebarProps) {
       {/* 底部：退出 + 用户信息 */}
       <div className="p-2 border-t border-slate-100 space-y-1">
         <button
+          onClick={() => signOut({ callbackUrl: "/login" })}
           className={cn(
             "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors",
             collapsed && "justify-center px-2"

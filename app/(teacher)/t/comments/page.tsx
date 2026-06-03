@@ -24,7 +24,15 @@ export default async function CommentsPage({
     select: { subjects: true },
   });
 
-  const subjects: string[] = Array.isArray(teacher?.subjects) ? (teacher?.subjects as string[]) : [];
+  let subjects: string[] = [];
+  if (teacher?.subjects) {
+    try {
+      const parsed = JSON.parse(teacher.subjects);
+      subjects = Array.isArray(parsed) ? parsed : [teacher.subjects];
+    } catch {
+      subjects = [teacher.subjects];
+    }
+  }
 
   // 获取教师负责的班级和学生
   const teacherClasses = await prisma.teacherClass.findMany({

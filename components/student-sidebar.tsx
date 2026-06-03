@@ -15,6 +15,7 @@ import {
   Settings,
   LogOut,
 } from "lucide-react";
+import { signOut } from "next-auth/react";
 
 const NAV_ITEMS = [
   { label: "今日工作台", href: "/dashboard", icon: LayoutDashboard },
@@ -86,7 +87,10 @@ export function StudentSidebar({ user }: StudentSidebarProps) {
           <span>设置</span>
         </Link>
 
-        <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors">
+        <button
+          onClick={() => signOut({ callbackUrl: "/login" })}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors"
+        >
           <LogOut className="w-4 h-4 shrink-0" />
           <span>退出登录</span>
         </button>

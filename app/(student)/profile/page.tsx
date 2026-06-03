@@ -38,28 +38,29 @@ async function getSixDimensionData(studentId: string, gradeName: string): Promis
 
   const benchmark = getGradeBenchmark(gradeName);
 
-  // 尝试解析现有的五维数据
-  let legacyDimensions: Record<string, number> = {};
+  // 尝试解析六维数据
+  let sixDimScores: Record<string, number> = {};
   if (careerProfile?.sixDimensions) {
     try {
       const dims = JSON.parse(careerProfile.sixDimensions);
-      if (dims["学业"]) {
-        legacyDimensions = dims;
-      } else {
-        legacyDimensions = dims;
+      // 检测是否是新六维格式（包含六维键之一）
+      const hasSixDimKeys = SIX_DIMENSIONS.some((dim) => typeof dims[dim.key] === "number");
+      if (hasSixDimKeys) {
+        sixDimScores = dims;
+      } else if (dims["学业"]) {
+        // 旧五维格式，需要映射
+        sixDimScores = mapLegacyToSixDimensions(dims);
       }
     } catch {
-      legacyDimensions = {};
+      sixDimScores = {};
     }
   }
 
-  // 如果存在旧数据，映射到六维；否则使用演示数据
-  const hasLegacyData = Object.keys(legacyDimensions).length > 0;
+  // 如果有数据，直接构建六维详情；否则使用演示数据
+  const hasData = Object.keys(sixDimScores).length > 0;
 
-  if (hasLegacyData) {
-    // 旧数据映射 + 补充完整结构
-    const mappedScores = mapLegacyToSixDimensions(legacyDimensions);
-    return buildSixDimensionFromScores(mappedScores, benchmark, gradeName);
+  if (hasData) {
+    return buildSixDimensionFromScores(sixDimScores as Record<DimensionKey, number>, benchmark, gradeName);
   }
 
   // 无数据时使用演示数据（开发/演示阶段）

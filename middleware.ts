@@ -12,7 +12,9 @@ export const config = {
     "/activities/:path*",
     "/semester-reports/:path*",
     "/space/:path*",
+    "/teacher/:path*",
     "/t/:path*",
+    "/admin/:path*",
     "/a/:path*",
   ],
 };

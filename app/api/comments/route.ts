@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { parsePagination, buildPaginatedResponse } from "@/lib/pagination";
+import { refreshStudentDimensions } from "@/lib/dimension-calculator";
 
 // POST - 教师创建评语
 export async function POST(req: NextRequest) {
@@ -34,6 +35,11 @@ export async function POST(req: NextRequest) {
           select: { name: true, title: true },
         },
       },
+    });
+
+    // 后台异步触发六维分数重算
+    refreshStudentDimensions(studentId).catch((err) => {
+      console.error(`评语提交后重算学生 ${studentId} 六维分数失败:`, err);
     });
 
     return Response.json({ comment });

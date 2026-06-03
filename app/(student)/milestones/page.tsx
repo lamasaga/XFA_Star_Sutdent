@@ -40,8 +40,7 @@ interface Milestone {
   title: string;
   type: string;
   occurredAt: string;
-  points: number;
-  isVerified: boolean;
+  status: string;
 }
 
 export default function MilestonesPage() {
@@ -77,8 +76,9 @@ export default function MilestonesPage() {
         body: JSON.stringify(form),
       });
       if (res.ok) {
-        const newItem = await res.json();
-        setItems((prev) => [newItem, ...prev]);
+        const result = await res.json();
+        const newMilestone = result.milestone || result;
+        setItems((prev) => [newMilestone, ...prev]);
         setDialogOpen(false);
         setForm({ title: "", type: "PERSONAL", occurredAt: "" });
       }
@@ -210,8 +210,11 @@ export default function MilestonesPage() {
                       <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="font-medium text-[#1a3a5c] truncate">{item.title}</h3>
                         <Badge variant="outline" className="text-[10px]">{meta.label}</Badge>
-                        {item.isVerified && (
-                          <Badge className="bg-green-50 text-green-700 border-green-200 text-[10px]">已认证</Badge>
+                        {item.status === "APPROVED" && (
+                          <Badge className="bg-green-50 text-green-700 border-green-200 text-[10px]">已通过</Badge>
+                        )}
+                        {item.status === "PENDING" && (
+                          <Badge className="bg-yellow-50 text-yellow-700 border-yellow-200 text-[10px]">审核中</Badge>
                         )}
                       </div>
                       <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-400">
@@ -221,7 +224,7 @@ export default function MilestonesPage() {
                         </span>
                         <span className="flex items-center gap-1">
                           <Star className="h-3 w-3 text-yellow-500" />
-                          +{item.points} 积分
+                          {item.status === "APPROVED" ? "已计入档案" : "待审核"}
                         </span>
                       </div>
                     </div>

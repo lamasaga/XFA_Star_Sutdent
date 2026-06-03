@@ -15,6 +15,7 @@ import {
   ChevronRight,
   LogOut,
 } from "lucide-react";
+import { signOut } from "next-auth/react";
 import { useState } from "react";
 
 // 教师角色类型
@@ -116,10 +117,13 @@ export function TeacherSidebar({ user }: TeacherSidebarProps) {
 
       {/* 底部：退出 + 用户信息 */}
       <div className="p-2 border-t border-slate-100 space-y-1">
-        <button className={cn(
-          "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors",
-          collapsed && "justify-center px-2"
-        )}>
+        <button
+          onClick={() => signOut({ callbackUrl: "/login" })}
+          className={cn(
+            "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors",
+            collapsed && "justify-center px-2"
+          )}
+        >
           <LogOut className="w-4 h-4 shrink-0" />
           {!collapsed && <span>退出登录</span>}
         </button>

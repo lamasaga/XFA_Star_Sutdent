@@ -32,10 +32,17 @@ export default function AdminAssessmentsPage() {
   }, []);
 
   async function fetchAssessments() {
-    setTimeout(() => {
-      setAssessments([]);
+    try {
+      const res = await fetch("/api/admin/assessments?limit=200");
+      if (res.ok) {
+        const data = await res.json();
+        setAssessments(data.assessments || []);
+      }
+    } catch (error) {
+      console.error("获取测评记录失败:", error);
+    } finally {
       setLoading(false);
-    }, 500);
+    }
   }
 
   const psychology = assessments.filter((a) => a.type === "PSYCHOLOGY");
